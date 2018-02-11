@@ -77,7 +77,7 @@ struct commit *add_major_commit(struct commit *from, char *comment)
 {
     struct commit* commit;
 
-    commit = new_commit(from->version.major + 1, from->version.minor, comment);
+    commit = new_commit(from->version.major + 1, 0, comment);
     insert_commit(from, commit);
     return commit;
 }

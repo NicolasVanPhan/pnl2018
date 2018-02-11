@@ -1,0 +1,102 @@
+
+
+Notes du TME1 de PNL
+2017/2018
+
+Notes :
+Il est preferable d'utiliser gdb en noyau car quand la vm plante on pourra
+utiliser gdb mais pas valgrind.
+Diff gdb valgrind : valgrind c'est plutot un debugger memoire,
+tandis qu'avec gdb on peut faire du breakpoint, de l'execution pas a pas.
+
+Utiliser gdb :
+compiler avec gdb
+print : permet d'afficher des variables (on peut utiliser la syntaxe C)
+break : filename:line
+
+========================= Exercice 1 ==========================================
+
+------------------------- Question 1 ------------------------------------------
+On obtient que toutes les versions affichees sont stables, ou alors qu'elles
+sont toutes instables, alors que par convention, seules les versions paires
+sont stables.
+-> Le test de stabilite n'est pas correct
+
+------------------------- Question 2 -------------------------------------------
+La norme C impose que dans une struture, les champs restent
+dans le meme ordre en memoire, MAIS rien n'impose qu'ils soient colles.
+Ici on a un short et un long, et au lieu de les coller et devoir acceder a deux
+blocs memoire pour avoir le long, le compilateur met un padding et place le long
+au debut du bloc d'apres, ya donc un padding et donc le programme est fausse
+a cause de ca car il va essayer de lire dans le padding qui contient
+n'importe quoi.
+
+Empreinte memoire de v :
+M : major
+m : minor
+f : flags
+x : garbage
+[M | M | x | x | x | x | x | x ]
+[m | m | m | m | m | m | m | m ]
+[f | x | x | x | x | x | x | x ]
+
+
+------------------------- Question 3 et 4 --------------------------------------
+c.f. code, bon c juste un return 1 & v->minor, that's all
+
+
+------------------------- Question 5 -------------------------------------------
+Pour choper l'emprunte memoire prise par la structure version,
+on regarde la difference entre l'adresse au tout debut de v (adresse de v)
+et l'adresse toute a la fin de v (adresse du dernier champ + taille du champ)
+
+------------------------- Question 6 -------------------------------------------
+Bah on cale minor soit en premier, soit en dernier, pour que les deux petits
+morceaux soient dans le meme bloc memoire.
+Resultat : struct version ne prend plus que deux blocs memoire plutot que 3
+(16 octets au lieu de 24)
+
+========================= Exercice 2 ===========================================
+
+------------------------- Question 1 -------------------------------------------
+c.f. code
+
+------------------------- Question 2 -------------------------------------------
+struct commit c;
+
+octet 42 :     &c, ou de maniere equivalente &(c->id)
+octet 43 :     xx 
+octet 44 :     xx
+octet 45 :     xx
+octet 46 :     xx
+octet 47 :     xx
+octet 48 :     xx
+octet 49 :     xx
+octet 50 :     &(c->version) 
+octet 51 :     xx
+octet 52 :     xx ...
+
+Pour passer d'un pointeur de struct version au pointeur de struct commit
+qui englobe la version, il suffit de reculer de N octets en memoire.
+Ici N = 8, mais si on change l'ordre de declaration des champs dans struct commit,
+cet offset changera. En revanche, cet ordre sera fixe a l'execution et donc l'offset
+sera une constante, il suffit donc de calculer cette constante et le tour est joue.
+
+Deux manieres de faire : soit dans notre fontion get_offset()
+on declare un struct commit et on chope &c->version - &c
+Soit de maniere un peu plus cool, on cast 0x0 en struct commit* et
+on en prend le champ version, l'adresse finale sera l'offset.
+
+On a donc :
+(struct commit*)0x0
+((struct commit*)0x0)->version
+&(((struct commit*)0x0)->version)  // c'est l'offset, tadaaa !
+
+ensuite notre fonction commit_of() soustrait l'offset a notre adresse d'entree
+et ca donne l'adresse de sortie, that's all.
+
+========================= Exercice 3 =========================================
+
+------------------------- Question 1 a 5 -------------------------------------------
+c.f. code
+
