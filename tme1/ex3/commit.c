@@ -18,7 +18,6 @@ static int nextId;
 struct commit *new_commit(unsigned short major, unsigned long minor,
 			  char *comment)
 {
-	/* TODO : Exercice 3 - Question 2 */
     struct commit* commit = (struct commit*)malloc(sizeof(struct commit));
     commit->id = nextId++;
     commit->version.major = major;
@@ -40,12 +39,11 @@ struct commit *new_commit(unsigned short major, unsigned long minor,
   */
 static struct commit *insert_commit(struct commit *from, struct commit *new)
 {
-	/* TODO : Exercice 3 - Question 3 */
     from->next->prev = new;
     new->next = from->next;
     from->next = new;
     new->prev = from;
-	return new;
+    return new;
 }
 
 /**
@@ -59,18 +57,15 @@ static struct commit *insert_commit(struct commit *from, struct commit *new)
   */
 struct commit *add_minor_commit(struct commit *from, char *comment)
 {
-	/* TODO : Exercice 3 - Question 3 */
-    struct commit* commit = (struct commit*)malloc(sizeof(struct commit));
-    commit->id = nextId++;
-    commit->version.major = from->version.major;
-    commit->version.minor = from->version.minor + 1;
-    commit->comment = comment;
+    struct commit* commit;
+
+    commit = new_commit(from->version.major, from->version.minor + 1, comment);
     insert_commit(from, commit);
-	return commit;
+    return commit;
 }
 
 /**
-	* add_major_commit - genere et insere un commit correspondant a une version
+  * add_major_commit - genere et insere un commit correspondant a une version
   *                    majeure
   *
   * @from: commit qui deviendra le predecesseur du commit insere
@@ -80,14 +75,11 @@ struct commit *add_minor_commit(struct commit *from, char *comment)
   */
 struct commit *add_major_commit(struct commit *from, char *comment)
 {
-	/* TODO : Exercice 3 - Question 3 */
-    struct commit* commit = (struct commit*)malloc(sizeof(struct commit));
-    commit->id = nextId++;
-    commit->version.major = from->version.major + 1;
-    commit->version.minor = from->version.minor;
-    commit->comment = comment;
+    struct commit* commit;
+
+    commit = new_commit(from->version.major + 1, from->version.minor, comment);
     insert_commit(from, commit);
-	return commit;
+    return commit;
 }
 
 /**

@@ -10,14 +10,20 @@
   */
 struct history *new_history(char *name)
 {
-	/* TODO : Exercice 3 - Question 2 */
-    struct history* history = (struct history*)malloc(sizeof(struct history));
+    struct commit*  phantom_menace;
+    struct history* history;
+
+    /* Initialization of the phantom commit */
+    phantom_menace = new_commit(0, 0, NULL);
+    phantom_menace->next = phantom_menace;
+    phantom_menace->prev = phantom_menace;
+
+    /* Initialization of the new history */
+    history = (struct history*)malloc(sizeof(struct history));
     history->name = name;
     history->commit_count = 0;
-    history->commit_list = (struct commit*)malloc(sizeof(struct commit));
-    history->commit_list->prev = history->commit_list;
-    history->commit_list->next = history->commit_list;
-	return history;
+    history->commit_list = phantom_menace;
+    return history;
 }
 
 /**
@@ -27,7 +33,6 @@ struct history *new_history(char *name)
   */
 struct commit *last_commit(struct history *h)
 {
-	/* TODO : Exercice 3 - Question 2 */
     return h->commit_list->prev;
 }
 
@@ -39,10 +44,8 @@ struct commit *last_commit(struct history *h)
   */
 void display_history(struct history *h)
 {
-	/* TODO : Exercice 3 - Question 2 */
     struct commit* p;
-    for (p = h->commit_list->next;
-            p != h->commit_list; p = p->next)
+    for (p = h->commit_list->next; p != h->commit_list; p = p->next)
     {
         printf("id : %ld\n\n", p->id);
         printf("%s\n\n\n", p->comment); 
