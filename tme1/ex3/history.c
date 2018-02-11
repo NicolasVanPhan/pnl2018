@@ -45,11 +45,9 @@ struct commit *last_commit(struct history *h)
 void display_history(struct history *h)
 {
     struct commit* p;
+    printf("History of '%s'\n", h->name);
     for (p = h->commit_list->next; p != h->commit_list; p = p->next)
-    {
-        printf("id : %ld\n\n", p->id);
-        printf("%s\n\n\n", p->comment); 
-    }
+        display_commit(p);
 }
 
 /**
@@ -61,6 +59,17 @@ void display_history(struct history *h)
   */
 void infos(struct history *h, int major, unsigned long minor)
 {
-	/* TODO : Exercice 3 - Question 2 */
-	return NULL;
+    struct commit   *c;
+
+    c = h->commit_list->next;
+    while (c != h->commit_list && (c->version.major < major || c->version.minor < minor))
+        c = c->next;
+    if (c->version.major == major && c->version.minor == minor)
+    {
+        printf("%ld:\t", c->id);
+        display_version(is_unstable_bis, &(c->version));
+        printf("\t%s\n", c->comment);
+    }
+    else
+        printf("Not here !!!\n");
 }

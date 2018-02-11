@@ -91,8 +91,11 @@ struct commit *add_major_commit(struct commit *from, char *comment)
   */
 struct commit *del_commit(struct commit *victim)
 {
-	/* TODO : Exercice 3 - Question 5 */
-	return NULL;
+    victim->prev->next = victim->next;
+    victim->next->prev = victim->prev;
+    victim->prev = NULL;
+    victim->next = NULL;
+    return victim;
 }
 
 /**
@@ -103,6 +106,12 @@ struct commit *del_commit(struct commit *victim)
 void display_commit(struct commit *c)
 {
 	/* TODO : Exercice 3 - Question 4 */
+    printf("%ld:\t", c->id);
+    display_version(is_unstable_bis, &(c->version));
+    if (c->comment != NULL)
+        printf("\t'%s'\n", c->comment);
+    else
+        printf("\tno comment\n");
 }
 
 /**
