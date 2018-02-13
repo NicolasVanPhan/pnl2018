@@ -127,5 +127,6 @@ void display_commit(struct commit *c)
 struct commit *commitOf(struct version *version)
 {
 	/* TODO : Exercice 2 - Question 2 */
-	return NULL;
+	int offset = (int)(((char*)(&(((struct commit*)0x0)->version))) - (char*)&version);
+    return (struct commit*)((char*)version - offset);
 }
