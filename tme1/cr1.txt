@@ -78,9 +78,10 @@ octet 52 :     xx ...
 
 Pour passer d'un pointeur de struct version au pointeur de struct commit
 qui englobe la version, il suffit de reculer de N octets en memoire.
-Ici N = 8, mais si on change l'ordre de declaration des champs dans struct commit,
-cet offset changera. En revanche, cet ordre sera fixe a l'execution et donc l'offset
-sera une constante, il suffit donc de calculer cette constante et le tour est joue.
+Ici N = 8, mais si on change l'ordre de declaration des champs dans struct
+commit, cet offset changera. En revanche, cet ordre sera fixe a l'execution
+et donc l'offset sera une constante, il suffit donc de calculer cette constante
+et le tour est joue.
 
 Deux manieres de faire : soit dans notre fontion get_offset()
 on declare un struct commit et on chope &c->version - &c
@@ -97,6 +98,6 @@ et ca donne l'adresse de sortie, that's all.
 
 ========================= Exercice 3 =========================================
 
-------------------------- Question 1 a 5 -------------------------------------------
+------------------------- Question 1 a 5 ---------------------------------------
 c.f. code
 
