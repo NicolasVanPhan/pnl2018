@@ -23,8 +23,7 @@ struct commit *new_commit(unsigned short major, unsigned long minor,
     commit->version.major = major;
     commit->version.minor = minor;
     commit->comment = comment;
-    commit->next = NULL;
-    commit->prev = NULL;
+    INIT_LIST_HEAD(&(commit->hook));
     return commit;
 }
 
@@ -39,10 +38,7 @@ struct commit *new_commit(unsigned short major, unsigned long minor,
   */
 static struct commit *insert_commit(struct commit *from, struct commit *new)
 {
-    from->next->prev = new;
-    new->next = from->next;
-    from->next = new;
-    new->prev = from;
+    list_add(&(new->hook), &(from->hook));
     return new;
 }
 
@@ -91,10 +87,7 @@ struct commit *add_major_commit(struct commit *from, char *comment)
   */
 struct commit *del_commit(struct commit *victim)
 {
-    victim->prev->next = victim->next;
-    victim->next->prev = victim->prev;
-    victim->prev = NULL;
-    victim->next = NULL;
+    list_del(&(victim->hook));
     return victim;
 }
 

@@ -15,8 +15,6 @@ struct history *new_history(char *name)
 
     /* Initialization of the phantom commit */
     phantom_menace = new_commit(0, 0, NULL);
-    phantom_menace->next = phantom_menace;
-    phantom_menace->prev = phantom_menace;
 
     /* Initialization of the new history */
     history = (struct history*)malloc(sizeof(struct history));
@@ -33,7 +31,7 @@ struct history *new_history(char *name)
   */
 struct commit *last_commit(struct history *h)
 {
-    return h->commit_list->prev;
+    return list_last_entry(&(h->commit_list->hook), struct commit, hook);
 }
 
 /**
@@ -44,10 +42,13 @@ struct commit *last_commit(struct history *h)
   */
 void display_history(struct history *h)
 {
-    struct commit* p;
+    struct commit* c;
+
     printf("History of '%s'\n", h->name);
-    for (p = h->commit_list->next; p != h->commit_list; p = p->next)
-        display_commit(p);
+    list_for_each_entry(c, &(h->commit_list->hook), hook) {
+        display_commit(c);
+    }
+    printf("\n");
 }
 
 /**
@@ -61,15 +62,16 @@ void infos(struct history *h, int major, unsigned long minor)
 {
     struct commit   *c;
 
-    c = h->commit_list->next;
-    while (c != h->commit_list && (c->version.major < major || c->version.minor < minor))
-        c = c->next;
-    if (c->version.major == major && c->version.minor == minor)
-    {
+    list_for_each_entry(c, &(h->commit_list->hook), hook) {
+	if (c->version.major == major && c->version.minor == minor)
+	    break;
+    }
+    if (c != h->commit_list) {
         printf("%ld:\t", c->id);
         display_version(is_unstable_bis, &(c->version));
         printf("\t%s\n", c->comment);
     }
-    else
+    else {
         printf("Not here !!!\n");
+    }
 }
