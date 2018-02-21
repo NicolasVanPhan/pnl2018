@@ -4,9 +4,9 @@
 #include"commit.h"
 
 struct history {
-	unsigned long commit_count;
-	char *name;
-	struct commit *commit_list;
+	unsigned long	commit_count;
+	char		*name;
+	struct commit	*commit_list;
 };
 
 struct history *new_history(char *name);
