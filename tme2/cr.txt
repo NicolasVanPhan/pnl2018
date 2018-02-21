@@ -1,7 +1,8 @@
 
 
-Summary of list.h
+Objectif :  Bien realiser en quoi les fonctions generiques c'est le feu
 
+	Summary of list.h :
 init_list_head()
 list_add()
 list_del()
@@ -21,4 +22,5 @@ container_of() 	: permet d'obtenir le carre bleu englobant apd carre rouge
 list_foreach()	: parcourt les carres rouges
 list_foreach_entry : parcourt les carres bleus
 
-
+les struct commit; c'est de la forward declaration,
+ca permet de pouvoir declarer des struct commit* dans un struct commit;
