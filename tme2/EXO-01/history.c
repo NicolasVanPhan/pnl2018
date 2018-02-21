@@ -10,18 +10,18 @@
   */
 struct history *new_history(char *name)
 {
-    struct commit*  phantom_menace;
-    struct history* history;
+	struct commit	*phantom_menace;
+	struct history	*history;
 
-    /* Initialization of the phantom commit */
-    phantom_menace = new_commit(0, 0, NULL);
+	/* Initialization of the phantom commit */
+	phantom_menace = new_commit(0, 0, NULL);
 
-    /* Initialization of the new history */
-    history = (struct history*)malloc(sizeof(struct history));
-    history->name = name;
-    history->commit_count = 0;
-    history->commit_list = phantom_menace;
-    return history;
+	/* Initialization of the new history */
+	history = (struct history*)malloc(sizeof(struct history));
+	history->name = name;
+	history->commit_count = 0;
+	history->commit_list = phantom_menace;
+	return history;
 }
 
 /**
@@ -31,7 +31,7 @@ struct history *new_history(char *name)
   */
 struct commit *last_commit(struct history *h)
 {
-    return list_last_entry(&(h->commit_list->hook), struct commit, hook);
+	return list_last_entry(&(h->commit_list->hook), struct commit, hook);
 }
 
 /**
@@ -42,13 +42,13 @@ struct commit *last_commit(struct history *h)
   */
 void display_history(struct history *h)
 {
-    struct commit* c;
+	struct commit	*c;
 
-    printf("History of '%s'\n", h->name);
-    list_for_each_entry(c, &(h->commit_list->hook), hook) {
-        display_commit(c);
-    }
-    printf("\n");
+	printf("History of '%s'\n", h->name);
+	list_for_each_entry(c, &(h->commit_list->hook), hook) {
+    		display_commit(c);
+	}
+	printf("\n");
 }
 
 /**
@@ -60,18 +60,18 @@ void display_history(struct history *h)
   */
 void infos(struct history *h, int major, unsigned long minor)
 {
-    struct commit   *c;
+	struct commit   *c;
 
-    list_for_each_entry(c, &(h->commit_list->hook), hook) {
-	if (c->version.major == major && c->version.minor == minor)
-	    break;
-    }
-    if (c != h->commit_list) {
-        printf("%ld:\t", c->id);
-        display_version(is_unstable_bis, &(c->version));
-        printf("\t%s\n", c->comment);
-    }
-    else {
-        printf("Not here !!!\n");
-    }
+	list_for_each_entry(c, &(h->commit_list->hook), hook) {
+		if (c->version.major == major && c->version.minor == minor)
+	    		break;
+    	}
+    	if (c != h->commit_list) {
+        	printf("%ld:\t", c->id);
+        	display_version(is_unstable_bis, &(c->version));
+        	printf("\t%s\n", c->comment);
+    	}
+    	else {
+        	printf("Not here !!!\n");
+    	}
 }

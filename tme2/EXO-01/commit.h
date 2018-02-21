@@ -1,8 +1,8 @@
 #ifndef COMMIT_H
 #define COMMIT_H
 
-#include"version.h"
-#include"list.h"
+#include "version.h"
+#include "list.h"
 
 struct commit;
 
@@ -13,7 +13,8 @@ struct commit {
 	struct list_head hook;
 };
 
-struct commit *new_commit(unsigned short major, unsigned long minor,
+struct commit *new_commit(unsigned short major,
+			  unsigned long minor,
 			  char *comment);
 
 struct commit *add_minor_commit(struct commit *from, char *comment);

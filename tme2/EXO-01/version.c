@@ -10,13 +10,13 @@ int is_unstable(struct version *v)
 
 int is_unstable_bis(struct version *v)
 {
-    return 1 & v->minor;
+   	return 1 & v->minor;
 }
 
 void display_version(int(*funk)(struct version*), struct version *v)
 {
 	printf("%2u.%lu %s", v->major, v->minor,
-			     funk(v) ? "(unstable)" : "(stable)  ");
+		funk(v) ? "(unstable)" : "(stable)  ");
 }
 
 int cmp_version(struct version *v, unsigned short major, unsigned long minor)

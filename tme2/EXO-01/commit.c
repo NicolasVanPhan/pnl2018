@@ -15,16 +15,17 @@ static int nextId;
   *
   * @return: retourne un pointeur vers la structure allouee et initialisee
   */
-struct commit *new_commit(unsigned short major, unsigned long minor,
+struct commit *new_commit(unsigned short major,
+			  unsigned long minor,
 			  char *comment)
 {
-    struct commit* commit = (struct commit*)malloc(sizeof(struct commit));
-    commit->id = nextId++;
-    commit->version.major = major;
-    commit->version.minor = minor;
-    commit->comment = comment;
-    INIT_LIST_HEAD(&(commit->hook));
-    return commit;
+	struct commit* commit = (struct commit*)malloc(sizeof(struct commit));
+	commit->id = nextId++;
+	commit->version.major = major;
+	commit->version.minor = minor;
+	commit->comment = comment;
+	INIT_LIST_HEAD(&(commit->hook));
+	return commit;
 }
 
 /**
@@ -38,8 +39,8 @@ struct commit *new_commit(unsigned short major, unsigned long minor,
   */
 static struct commit *insert_commit(struct commit *from, struct commit *new)
 {
-    list_add(&(new->hook), &(from->hook));
-    return new;
+	list_add(&(new->hook), &(from->hook));
+	return new;
 }
 
 /**
@@ -53,11 +54,12 @@ static struct commit *insert_commit(struct commit *from, struct commit *new)
   */
 struct commit *add_minor_commit(struct commit *from, char *comment)
 {
-    struct commit* commit;
+	struct commit	*commit;
 
-    commit = new_commit(from->version.major, from->version.minor + 1, comment);
-    insert_commit(from, commit);
-    return commit;
+	commit = new_commit(from->version.major, from->version.minor + 1,
+		comment);
+	insert_commit(from, commit);
+	return commit;
 }
 
 /**
@@ -71,11 +73,11 @@ struct commit *add_minor_commit(struct commit *from, char *comment)
   */
 struct commit *add_major_commit(struct commit *from, char *comment)
 {
-    struct commit* commit;
+	struct commit	*commit;
 
-    commit = new_commit(from->version.major + 1, 0, comment);
-    insert_commit(from, commit);
-    return commit;
+	commit = new_commit(from->version.major + 1, 0, comment);
+	insert_commit(from, commit);
+	return commit;
 }
 
 /**
@@ -98,13 +100,12 @@ struct commit *del_commit(struct commit *victim)
   */
 void display_commit(struct commit *c)
 {
-	/* TODO : Exercice 3 - Question 4 */
-    printf("%ld:\t", c->id);
-    display_version(is_unstable_bis, &(c->version));
-    if (c->comment != NULL)
-        printf("\t'%s'\n", c->comment);
-    else
-        printf("\tno comment\n");
+	printf("%ld:\t", c->id);
+	display_version(is_unstable_bis, &(c->version));
+	if (c->comment != NULL)
+	    	printf("\t'%s'\n", c->comment);
+	else
+    		printf("\tno comment\n");
 }
 
 /**
@@ -119,7 +120,7 @@ void display_commit(struct commit *c)
   */
 struct commit *commitOf(struct version *version)
 {
-	/* TODO : Exercice 2 - Question 2 */
-	int offset = (int)(((char*)(&(((struct commit*)0x0)->version))) - (char*)&version);
-    return (struct commit*)((char*)version - offset);
+	int offset = (int)(((char*)(&(((struct commit*)0x0)->version))) -
+		(char*)&version);
+    	return (struct commit*)((char*)version - offset);
 }
