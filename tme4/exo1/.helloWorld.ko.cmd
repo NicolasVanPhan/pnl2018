@@ -1,0 +1,1 @@
+cmd_/home/nicolas/Projects/pnl2018/tme4/exo1/helloWorld.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /home/nicolas/Projects/pnl2018/tme4/exo1/helloWorld.ko /home/nicolas/Projects/pnl2018/tme4/exo1/helloWorld.o /home/nicolas/Projects/pnl2018/tme4/exo1/helloWorld.mod.o ;  true
