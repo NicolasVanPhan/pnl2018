@@ -7,7 +7,7 @@ ifneq ($(KERNELRELEASE),)
 
 else
 	
-  KERNELDIR ?= /lib/modules/$(shell uname -r)/build
+  KERNELDIR ?= /home/nicolas/Projects/pnl2018/linux-4.9.82/
   PWD := $(shell pwd)
 
 all :
