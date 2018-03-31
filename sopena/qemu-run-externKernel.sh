@@ -5,7 +5,11 @@ HDA="-hda pnl-tp.img"
 HDB="-hdb myHome.img"
 KERNEL=/tmp/linux-4.14.20/arch/x86/boot/bzImage
 
-CMDLINE='root=/dev/sda1 rw vga=792 console=ttyS0 kgdboc=ttyS1'
+if [ -n "${KDB}" ]; then
+    KGD_WAIT='kgdbwait'
+fi
+
+CMDLINE="root=/dev/sda1 rw vga=792 console=ttyS0 kgdboc=ttyS1 ${KGD_WAIT}"
 
 FLAGS="--enable-kvm "
 
