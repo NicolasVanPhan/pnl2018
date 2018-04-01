@@ -3,4 +3,8 @@
 *.swp
 myHome.img
 pnl-tp.img
-linux-4.9.82
+pnl-tp-virtfs.img
+linux-4.9.82/
+linux-4.14.27/
+share/
+
