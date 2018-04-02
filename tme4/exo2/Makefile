@@ -3,8 +3,7 @@
 
 ifneq ($(KERNELRELEASE),)
 
-  obj-m := helloWorld.o
-  obj-m := helloWorldParam.o
+  obj-m := uname.o
 
 else
 	

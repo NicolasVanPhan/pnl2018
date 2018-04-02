@@ -27,7 +27,54 @@ Tried the same using make deb-pkg, and I indeed obtain a linux-headers-4.9.82.de
 YEEEEES ! I can compile kernel modules for 4.9.82 !!! (on the host, at least)
 
 ### Question 2
+Il y a deux makefile qui interviennent lorsqu'on compile un module kernel
+ - Le Makefile spécifique au kernel
+ - Le Makefile générique de compilation de kernel, dans les sources du noyau
+
+ 1. Le Makefile spécifique appelle le Makefile général pour compiler tous les modules en donnant à ce-dernier le chemin vers nous, le Makefile du module.
+ 2. Le Makefile général s'exécute, et en compilant les modules, il appelle notre Makefile (car on lui a donné notre chemin via `-M pwd`.
+ 3. Lorsqu'il se fait appeler, notre Makefile va ajouter notre module à la liste des modules à compiler (via obj-m), puis il se termine.
+ 4. On retourne au Makefile générique qui effectue la compilation de tous les modules, a fortiori du notre.
+
+Voila !!!
 
 ### Question 3
 
 Bah on peut le lire sur la sortie standard deja, puis dans les messages kernel via `dmesg`
+
+### Question 4
+
+c.f. code
+
+### Question 5
+
+Un `modinfo helloWorldParam.ko` affiche les infos sur notre module... 
+
+### Question 6
+
+sysfs est un système de fichiers virtuel servant d'interface avec le noyau.
+Autrement dit, c'est un ensemble de fichier contenus dans /sys et via lesquels on peut paramétrer le noyau ou récupérer des informations de celui-ci en écrivant/lisant dans ces fichiers.
+Ces fichiers ne sont pas réellement un ensemble de données présents sur le disque mais seulement une interface avec le kernel qui se présente sous la forme d'un ensemble de fichiers (d'où le "virtuel").
+
+Chaque système de fichiers virtuels (procfs, sysfs...) a sa propre arborescence, ses propres fichiers et apprendre ces arborescences et fichiers, c'est apprendre à interagir avec le kernel.
+
+Ici avec sysfs, pour modifier un paramètre d'un module, il faut aller éditer le fichier /sys/modules/mymodule/parameters/myparam qui contient la valeur du paramètre en question. Attention, pour que ce fichier existe et soit modifiable, il faut avoir pris soin de définir ses droits d'accès en troisième argument de module\_param().
+
+Exercice 2 : Mofification d'une variable du noyau à l'aide d'un module 
+--------------------------------------------------------------------------------
+
+### Question 1
+
+La variable globale `init_uts_ns` est une structure initialisée dans `/init/version.c` et contenant les champs :
+ - `kref` : une structure générique permettant de compter le nombre de références à un objet.
+ - `name` : The very name that `uname` should return.
+
+Cette variable est exportée via la macro EXPORT\_SYMBOL\_GPL() donc seuls les modules sous licence GPL peuvent y accéder.
+
+### Question 2
+
+c.f. code
+
+### Question 3
+
+Le nom d'origine doit etre restauré car de manière générale, un module doit restaurer les modification qu'il a apportées au noyau lors de son chargement, cela permet de préserver l'intégrité du noyau a travers les chargements/déchargements de modules.

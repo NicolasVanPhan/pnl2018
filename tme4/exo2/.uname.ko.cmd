@@ -1,0 +1,1 @@
+cmd_/home/nicolas/Projects/pnl2018/tme4/exo2/uname.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /home/nicolas/Projects/pnl2018/tme4/exo2/uname.ko /home/nicolas/Projects/pnl2018/tme4/exo2/uname.o /home/nicolas/Projects/pnl2018/tme4/exo2/uname.mod.o ;  true
