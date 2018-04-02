@@ -78,3 +78,12 @@ c.f. code
 ### Question 3
 
 Le nom d'origine doit etre restauré car de manière générale, un module doit restaurer les modification qu'il a apportées au noyau lors de son chargement, cela permet de préserver l'intégrité du noyau a travers les chargements/déchargements de modules.
+
+Exercice 3 : Les limites des modules 
+--------------------------------------------------------------------------------
+
+### Question 1
+
+En soi le module en question est faisable, mais le problème est qu'on ne peut pas utiliser la fonction iterate\_supers() car son auteur ne l'a pas exporté (dans linux/fs/super.c, là où la fonction est déclarée, l'auteur n'a pas utilisé EXPORT\_SYMBOL(iterate\_supers).
+
+Ce problème ne peut pas etre résolu par un module car il s'agit ici de modifier le code source d'un module déjà existant (ici ajouter EXPORT\_SYMBOL(iterate\_supers) dans super.c), seul un patch peut résoudre le problème.
