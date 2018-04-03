@@ -87,3 +87,9 @@ Exercice 3 : Les limites des modules
 En soi le module en question est faisable, mais le problème est qu'on ne peut pas utiliser la fonction iterate\_supers() car son auteur ne l'a pas exporté (dans linux/fs/super.c, là où la fonction est déclarée, l'auteur n'a pas utilisé EXPORT\_SYMBOL(iterate\_supers).
 
 Ce problème ne peut pas etre résolu par un module car il s'agit ici de modifier le code source d'un module déjà existant (ici ajouter EXPORT\_SYMBOL(iterate\_supers) dans super.c), seul un patch peut résoudre le problème.
+
+### Question 2
+
+Ici, il faut ajouter un champ de type `struct timespec` dans `struct super_block` pour enregistrer les dates des derniers affichages.
+Après, il suffit d'itéter avec `iterate_supers_type()` au lieu de `iterate_supers()`, sinon le code reste sensiblement le meme.
+
