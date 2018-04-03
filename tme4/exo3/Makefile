@@ -3,7 +3,7 @@
 
 ifneq ($(KERNELRELEASE),)
 
-  obj-m := show_sb.o
+  obj-m := show_sb.o update_sb.o
 
 else
 	
