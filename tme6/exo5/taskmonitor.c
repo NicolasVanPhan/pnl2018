@@ -27,6 +27,50 @@ struct task_sample {
 	cputime_t stime;
 };
 
+
+/* -------------------------------------------------------------------------- */
+/* ---------- Exercice 5 : Adding a sysfs interface ------------------------ */
+/* -------------------------------------------------------------------------- */
+
+bool get_sample(struct task_monitor *tm, struct task_sample *sample);
+int monitor_fn(void *data);
+
+static ssize_t taskmonitor_attr_show (struct kobject *kobj,
+	struct kobj_attribute *attr,
+	char *buf)
+{
+	struct task_sample ts;
+	if (!get_sample(tm, &ts))
+		return 0;
+	return scnprintf(buf, 20, "%d; usr %ld; sys %ld\n", target,
+		ts.utime, ts.stime);
+}
+
+static ssize_t taskmonitor_attr_store (struct kobject *kobj,
+	struct kobj_attribute *attr,
+	const char *buf,
+	size_t count)
+{
+	/* If input string == "start" and no thread is running */
+	if (!strcmp(buf, "start") && monitor_thread <= 0) {
+		monitor_thread = kthread_run(monitor_fn, NULL, "monitor_fn");
+	}
+
+	/* If input string == "stop" and there's a thread running */
+	if (!strcmp(buf, "stop") && monitor_thread > 0) {
+		kthread_stop(monitor_thread);
+		monitor_thread = NULL;
+	}
+
+	return count;
+}
+
+static struct kobj_attribute taskmonitor_attr = __ATTR_RW(taskmonitor_attr);
+
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+
 bool get_sample(struct task_monitor *tm, struct task_sample *sample)
 {
 	struct task_struct *task;
@@ -101,6 +145,7 @@ static int monitor_init(void)
 		goto abort;
 	}
 
+	sysfs_create_file(kernel_kobj, &(taskmonitor_attr.attr));
 	pr_info("Monitoring module loaded\n");
 	return 0;
 
@@ -118,6 +163,7 @@ static void monitor_exit(void)
 	put_pid(tm->pid);
 	kfree(tm);
 
+	sysfs_remove_file(kernel_kobj, &(taskmonitor_attr.attr));
 	pr_info("Monitoring module unloaded\n");
 }
 
