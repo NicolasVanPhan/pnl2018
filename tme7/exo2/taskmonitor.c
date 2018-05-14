@@ -3,6 +3,7 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/list.h>
+#include <linux/shrinker.h>
 
 MODULE_DESCRIPTION("A process monitor");
 MODULE_AUTHOR("Maxime Lorrillere <maxime.lorrillere@lip6.fr>");
@@ -10,7 +11,7 @@ MODULE_LICENSE("GPL");
 MODULE_VERSION("1");
 
 unsigned short target = 1; /* default pid to monitor */
-unsigned frequency = 1; /* sampling frequency */
+unsigned frequency = 100; /* sampling frequency */
 
 module_param(target, ushort, 0400);
 module_param(frequency, uint, 0600);
@@ -46,6 +47,51 @@ int monitor_fn(void *data);
 int monitor_pid(pid_t pid);
 static int monitor_init(void);
 static void monitor_exit(void);
+
+/* -------------------------------------------------------------------------- */
+/* ---------- TME7 Exercice 2 : Shrinker ------------------------------------ */
+/* -------------------------------------------------------------------------- */
+
+unsigned long taskmon_count(struct shrinker* s, struct shrink_control *sc)
+{
+	int	count;
+
+	mutex_lock(&tm->lock);
+	count = tm->nsamples;
+	mutex_unlock(&tm->lock);
+	return count;
+}
+
+unsigned long taskmon_scan(struct shrinker* s, struct shrink_control *sc)
+{
+	struct task_sample	*pts;
+	struct list_head	*plh;
+	int			nr_to_scan;
+	long			freed;
+
+	freed = 0;
+	nr_to_scan = sc->nr_to_scan;
+	mutex_lock(&tm->lock);
+	while (!list_empty(&tm->phantom.list)) {
+		if (freed >= nr_to_scan)
+			break;
+		plh = tm->phantom.list.next;
+		pts = list_entry(plh, struct task_sample, list);
+		list_del(plh);
+		kfree(pts);		
+		tm->nsamples--;
+		freed++;
+	}
+	mutex_unlock(&tm->lock);
+	return freed;
+}
+
+struct shrinker taskmon_shrinker = {
+	.count_objects = taskmon_count,
+	.scan_objects = taskmon_scan,
+	.seeks = DEFAULT_SEEKS,
+	.batch = 0,
+	.flags = 0};
 
 /* -------------------------------------------------------------------------- */
 /* ---------- TME6 Exercice 5 : Adding a sysfs interface -------------------- */
@@ -197,6 +243,7 @@ static int monitor_init(void)
 	}
 
 	sysfs_create_file(kernel_kobj, &(taskmonitor_attr.attr));
+	register_shrinker(&taskmon_shrinker);
 	pr_info("Monitoring module loaded\n");
 	return 0;
 
@@ -226,6 +273,7 @@ static void monitor_exit(void)
 	put_pid(tm->pid);
 	kfree(tm);
 
+	unregister_shrinker(&taskmon_shrinker);
 	sysfs_remove_file(kernel_kobj, &(taskmonitor_attr.attr));
 	pr_info("Monitoring module unloaded\n");
 }
