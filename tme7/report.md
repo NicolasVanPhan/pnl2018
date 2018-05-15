@@ -42,3 +42,18 @@ Cela permet non seulement d'êviter la fragmentation de la mémoire due
 à l'aspect aléatoire de l'adresse retournée par `kmalloc()` mais surtout
 de supprimer les espaces vides résultants de la "sur-allocation"
 de `kmalloc()` vue à la Question 1.
+
+Exercice 4 : Pré-allocation de la mémoire avec les *mempools*
+--------------------------------------------------------------------------------
+
+### Question 1
+
+La création d'un mempool entraine l'allocation de `min_nr` objets via `min_nr`
+appels à `my_alloc()`. Dans notre cas, les objets sont des `struct task_sample`.
+L'utilisation d'un mempool nécessite l'implémentation des deux fonctions qui
+permettent d'allouer et de désallouer un objet du pool.
+
+Exercice 5 : Récupération "au besoin" de la mémoire : *kref*
+--------------------------------------------------------------------------------
+
+
