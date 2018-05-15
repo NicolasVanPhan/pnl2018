@@ -57,3 +57,32 @@ Exercice 5 : Récupération "au besoin" de la mémoire : *kref*
 --------------------------------------------------------------------------------
 
 
+### Question 1
+
+Lorsqu'un nouveau `task_sample()` est crée, on fait passer son kref à 1,
+et lorsqu'on veut supprimer le sample, on décrémente son kref.
+En parallèle, lorsqu'on affiche un sample, on incrémente kref, on affiche
+puis on décrémente kref.
+
+L'objet sera désalloué uniquement lorsque son kref sera à 0.
+Lorsque le shrinker et le thread d'affichage sont en concurrence sur un meme
+sample, deux cas se produisent :
+
+1. L'afficheur incrémente kref avant que le shrinker le décrémente.
+Ainsi, juste avant l'affichage d'un sample, son kref passe à 2,
+et si le shrinker supprime ce kref, en réalité il va juste décrémenter
+son kref qui passera à 1 (!= 0, donc le sample ne sera pas désalloué
+en plein affichage).
+Ce n'est qu'une fois l'affichage terminé que l'afficheur décrémente le
+kref de 1 à 0, et ainsi le sample ciblé par le shrinker est bien supprimé.
+
+2. Le shrinker décrémente kref juste avant que l'afficheur essaye de
+l'incrémenter.
+Dans ce cas, kref passe à 0 et sa désallocation commencera.
+À ce moment là, il ne faut pas qu'afficheur l'incrémente et l'utilise,
+c'est pourquoi l'afficheur n'essaiera d'incrémenter un kref si et
+seulement s'il n'est pas à 0, auquel cas il abandonnera le sample.
+(d'où l'utilisation de `kref_get_unless_zero()`).
+
+Finalement, le principal effet des kref est de différer une désallocation
+du shrinker tant qu'un thread l'utilise.
