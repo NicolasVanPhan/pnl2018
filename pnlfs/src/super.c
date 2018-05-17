@@ -23,10 +23,32 @@
 //#include <linux/quotaops.h>
 //#include <asm/uaccess.h>
 
+#include "pnlfs.h"
 
 MODULE_AUTHOR("Nicolas Phan");
 MODULE_DESCRIPTION("A filesystem");
 MODULE_LICENSE("GPL");
+
+/* -------------------------------------------------------------------------- */
+/* --------- Mounting the file system --------------------------------------- */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * This function is needed by pnlfs_mount(), it setups the super block
+ */
+static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
+{
+	return -1;
+}
+
+/*
+ * This function is called by the VFS when a user mounts a pnlfs image
+ */
+static struct dentry *pnlfs_mount(struct file_system_type *fs_type,
+	int flags, const char *dev_name, void *data)
+{
+	return mount_bdev(fs_type, flags, dev_name, data, pnlfs_fill_super);
+}
 
 /* -------------------------------------------------------------------------- */
 /* --------- Registering the file system ------------------------------------ */
@@ -35,8 +57,8 @@ MODULE_LICENSE("GPL");
 static struct file_system_type pnlfs_fs_type = {
 	.owner		= THIS_MODULE,
 	.name		= "pnlfs",
-	.mount		= NULL,
-	.kill_sb	= NULL,
+	.mount		= pnlfs_mount,
+	.kill_sb	= kill_block_super,
 	.fs_flags	= FS_REQUIRES_DEV, /* NOTE : Our FS requires a device */
 };
 
