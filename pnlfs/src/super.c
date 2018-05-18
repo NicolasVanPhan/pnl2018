@@ -131,7 +131,7 @@ struct pnlfs_dir_block {
 
 
 
-
+typedef unsigned long	ulong;
 
 MODULE_AUTHOR("Nicolas Phan");
 MODULE_DESCRIPTION("A filesystem");
@@ -153,9 +153,9 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 	sector_t		blkno;
 	sector_t		blkfirst;
 	sector_t		blklast;
-	unsigned long		*ifree_bitmap;
-	//unsigned long		*bfree_bitmap;
-	unsigned long		*pcur_raw;
+	ulong			*ifree_bitmap;
+	ulong			*bfree_bitmap;
+	ulong			*pcur_raw;
 	int			nb_raws_per_block;
 	int			i;
 
@@ -182,19 +182,33 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 	psbi->nr_free_inodes = le32_to_cpu(psb->nr_free_inodes);
 	psbi->nr_free_blocks = le32_to_cpu(psb->nr_free_blocks);
 	
-	/* Extracting superblock content (the bitmaps) */
+	/* Extracting superblock content (the i bitmaps) */
 	ifree_bitmap = kmalloc(PNLFS_BLOCK_SIZE * psbi->nr_ifree_blocks,
 		GFP_KERNEL);
 	blkfirst = 1 + psbi->nr_istore_blocks; // first ifree block number
 	blklast = blkfirst + psbi->nr_ifree_blocks; // last ifree block number
-	nb_raws_per_block = PNLFS_BLOCK_SIZE / sizeof(unsigned long);
+	nb_raws_per_block = PNLFS_BLOCK_SIZE / sizeof(ulong);
 	pcur_raw = ifree_bitmap;
 	for (blkno = blkfirst; blkno < blklast; blkno++) { // foreach bitmap blk
 		bh = sb_bread(sb, blkno); // get the bitmap block
 		for (i = 0; i < nb_raws_per_block; i++) // save the raws
-			*pcur_raw++ = ((unsigned long *)bh->b_data)[i];
+			*pcur_raw++ = le64_to_cpu(((ulong *)bh->b_data)[i]);
 	}
 	psbi->ifree_bitmap = ifree_bitmap;
+
+	/* Extracting superblock content (the b bitmaps) */
+	bfree_bitmap = kmalloc(PNLFS_BLOCK_SIZE * psbi->nr_bfree_blocks,
+		GFP_KERNEL);
+	blkfirst = 1 + psbi->nr_istore_blocks + psbi->nr_ifree_blocks;
+	blklast = blkfirst + psbi->nr_bfree_blocks; // last ifree block number
+	nb_raws_per_block = PNLFS_BLOCK_SIZE / sizeof(ulong);
+	pcur_raw = bfree_bitmap;
+	for (blkno = blkfirst; blkno < blklast; blkno++) { // foreach bitmap blk
+		bh = sb_bread(sb, blkno); // get the bitmap block
+		for (i = 0; i < nb_raws_per_block; i++) // save the raws
+			*pcur_raw++ = le64_to_cpu(((ulong *)bh->b_data)[i]);
+	}
+	psbi->bfree_bitmap = bfree_bitmap;
 
 	/* Attaching the extracted content into the generic structure sb */
 	sb->s_fs_info = (void *)psbi;
