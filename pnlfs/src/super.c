@@ -138,6 +138,32 @@ MODULE_DESCRIPTION("A filesystem");
 MODULE_LICENSE("GPL");
 
 /* -------------------------------------------------------------------------- */
+/* --------- Superblock Operations ------------------------------------------ */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * This function undoes all what has been done by fill_super()
+ */
+static void pnlfs_put_super(struct super_block *sb)
+{
+	struct pnlfs_sb_info *psbi;
+
+	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
+	kfree(psbi->ifree_bitmap);
+	kfree(psbi->bfree_bitmap);
+	kfree(psbi);
+	sb->s_fs_info = NULL;
+}
+
+/*
+ * This structure contains pointers to all the functions performing
+ * a superblock operation
+ */
+static const struct super_operations pnlfs_sops = {
+	.put_super = pnlfs_put_super,
+};
+
+/* -------------------------------------------------------------------------- */
 /* --------- Mounting the file system --------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
@@ -209,6 +235,10 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 			*pcur_raw++ = le64_to_cpu(((ulong *)bh->b_data)[i]);
 	}
 	psbi->bfree_bitmap = bfree_bitmap;
+
+
+	/* Attaching our superblock operations to the VFS superblock */ 
+	sb->s_op = &pnlfs_sops;
 
 	/* Attaching the extracted content into the generic structure sb */
 	sb->s_fs_info = (void *)psbi;
