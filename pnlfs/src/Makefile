@@ -10,6 +10,7 @@ ifneq ($(KERNELRELEASE),)
 obj-m += pnlfs.o
 
 pnlfs-objs := super.o
+ccflags-y := -DDEBUG
 
 else
 	
