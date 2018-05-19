@@ -89,4 +89,22 @@ struct pnlfs_dir_block {
 	} files[PNLFS_MAX_DIR_ENTRIES];
 };
 
+typedef unsigned long	ulong;
+
+/*
+ * Function prototypes
+ */
+
+/* super.c */
+
+/* inode.c */
+extern struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
+
+/*
+ * Inode and file operations
+ */
+
+extern struct inode_operations pnlfs_file_inode_operations;
+extern struct file_operations pnlfs_file_operations;
+
 #endif	/* _PNLFS_H */

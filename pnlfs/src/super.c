@@ -26,8 +26,6 @@
 
 #include "pnlfs.h"
 
-typedef unsigned long	ulong;
-
 MODULE_AUTHOR("Nicolas Phan");
 MODULE_DESCRIPTION("A filesystem");
 MODULE_LICENSE("GPL");
@@ -51,11 +49,40 @@ static void pnlfs_put_super(struct super_block *sb)
 }
 
 /*
+ * This functions allocates a new pnlfs inode
+ */
+static struct inode *pnlfs_alloc_inode(struct super_block *sb)
+{
+	struct pnlfs_inode_info *pnli;
+
+	pnli = kmalloc(sizeof(struct pnlfs_inode_info), GFP_KERNEL);
+	if (pnli == NULL) {
+		pr_err("pnlfs: pnlfs_alloc_inode() : kmalloc failed\n");
+		return NULL;
+	}
+	inode_init_once(&pnli->vfs_inode);
+	return &pnli->vfs_inode;
+}
+
+/*
+ * This function destroys a pnlfs inode
+ */
+static void pnlfs_destroy_inode(struct inode *vfsi)
+{
+	struct pnlfs_inode_info *pnli;
+
+	pnli = container_of(vfsi, struct pnlfs_inode_info, vfs_inode);
+	kfree(pnli);
+}
+
+/*
  * This structure contains pointers to all the functions performing
  * a superblock operation
  */
 static const struct super_operations pnlfs_sops = {
 	.put_super = pnlfs_put_super,
+	.alloc_inode = pnlfs_alloc_inode,
+	.destroy_inode = pnlfs_destroy_inode,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -76,9 +103,10 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 	sector_t		blklast;
 	ulong			*ifree_bitmap;
 	ulong			*bfree_bitmap;
-	ulong			*pcur_raw;
-	int			nb_raws_per_block;
+	ulong			*pcur_row;
+	int			nb_rows_per_block;
 	int			i;
+	struct inode		*root;
 
 	/* Initialize the super block given as a parameter */
 	sb->s_magic = PNLFS_MAGIC;
@@ -108,12 +136,12 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 		GFP_KERNEL);
 	blkfirst = 1 + psbi->nr_istore_blocks; // first ifree block number
 	blklast = blkfirst + psbi->nr_ifree_blocks; // last ifree block number
-	nb_raws_per_block = PNLFS_BLOCK_SIZE / sizeof(ulong);
-	pcur_raw = ifree_bitmap;
+	nb_rows_per_block = PNLFS_BLOCK_SIZE / sizeof(ulong);
+	pcur_row = ifree_bitmap;
 	for (blkno = blkfirst; blkno < blklast; blkno++) { // foreach bitmap blk
 		bh = sb_bread(sb, blkno); // get the bitmap block
-		for (i = 0; i < nb_raws_per_block; i++) // save the raws
-			*pcur_raw++ = le64_to_cpu(((ulong *)bh->b_data)[i]);
+		for (i = 0; i < nb_rows_per_block; i++) // save the rows
+			*pcur_row++ = le64_to_cpu(((ulong *)bh->b_data)[i]);
 	}
 	psbi->ifree_bitmap = ifree_bitmap;
 
@@ -122,15 +150,14 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 		GFP_KERNEL);
 	blkfirst = 1 + psbi->nr_istore_blocks + psbi->nr_ifree_blocks;
 	blklast = blkfirst + psbi->nr_bfree_blocks; // last ifree block number
-	nb_raws_per_block = PNLFS_BLOCK_SIZE / sizeof(ulong);
-	pcur_raw = bfree_bitmap;
+	nb_rows_per_block = PNLFS_BLOCK_SIZE / sizeof(ulong);
+	pcur_row = bfree_bitmap;
 	for (blkno = blkfirst; blkno < blklast; blkno++) { // foreach bitmap blk
 		bh = sb_bread(sb, blkno); // get the bitmap block
-		for (i = 0; i < nb_raws_per_block; i++) // save the raws
-			*pcur_raw++ = le64_to_cpu(((ulong *)bh->b_data)[i]);
+		for (i = 0; i < nb_rows_per_block; i++) // save the rows
+			*pcur_row++ = le64_to_cpu(((ulong *)bh->b_data)[i]);
 	}
 	psbi->bfree_bitmap = bfree_bitmap;
-
 
 	/* Attaching our superblock operations to the VFS superblock */ 
 	sb->s_op = &pnlfs_sops;
@@ -138,8 +165,19 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 	/* Attaching the extracted content into the generic structure sb */
 	sb->s_fs_info = (void *)psbi;
 
+	/* Getting the root inode */
+	root = pnlfs_iget(sb, 0);
+	if (IS_ERR(root))
+		return PTR_ERR(root);
+	inode_init_owner(root, root, root->i_mode); // [TMP] parent is root
+	sb->s_root = d_make_root(root);
+	if (!sb->s_root) {
+		pr_err("pnlfs_fill_super(): Error getting root inode\n");
+		return -1;
+	}
+
 	brelse(bh);
-	return -1;
+	return 0;
 }
 
 /*
