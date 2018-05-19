@@ -18,6 +18,71 @@
 
 #include "pnlfs.h"
 
+static ino_t get_ino_from_name(struct inode *dir, const char *name);
+static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
+	unsigned int flags);
+static struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino);
+struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
+
+static ino_t get_ino_from_name(struct inode *dir, const char *name)
+{
+	struct pnlfs_inode_info		*pnli;
+	uint32_t			nr_entries;
+	sector_t			blkno;
+	struct buffer_head		*bh;
+	struct pnlfs_file		*rows;
+	int				i;
+
+	if (strnlen(name, PNLFS_FILENAME_LEN) == PNLFS_FILENAME_LEN) {
+		pr_err("Filename too long\n");
+		return -EINVAL;
+	}
+
+	if (dir == NULL)
+		return -EFAULT;
+
+	/* Get the block where the inode--filename rows are stored */
+	pnli = container_of(dir, struct pnlfs_inode_info, vfs_inode);
+	nr_entries = pnli->nr_entries;
+	blkno = pnli->index_block;
+	bh = sb_bread(dir->i_sb, blkno);
+
+	/* Read the block to find the ino matching our filename */
+	rows = (struct pnlfs_file *)bh->b_data;
+	for (i = 0; i < nr_entries; i++) {
+		if (!strncmp(rows[i].filename, name, PNLFS_FILENAME_LEN))
+			return le32_to_cpu(rows[i].inode);
+	}
+	return -1;
+}
+
+/*
+ * This function returns the dentry refering to the file named after
+ * the name found in dentry->d_name, in the parent directory refered
+ * by dir
+ *
+ * @dir:    The inode of the parent directory in which this function must
+ *          find the file named dentry->d_name
+ * @dentry: The negative (="empty", "yet-to-be-filled") dentry of the file
+ *          whose inode must be found by this function
+ */
+static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
+	unsigned int flags)
+{
+	ino_t		ino;
+	struct inode	*inode;
+
+	/* Find the inode number of the file to be found (aka target file) */
+	ino = get_ino_from_name(dir, dentry->d_name.name);
+
+	/* Get the inode of the target file */
+	inode = pnlfs_iget(dir->i_sb, ino);
+
+	/* Fill the dentry from the retrieved inode */
+	d_add(dentry, inode);
+	return dentry;
+}
+
 /*
  * This function reads a pnlfs inode on a pnlfs image
  */
@@ -88,6 +153,8 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino)
 	return vfsi;
 }
 
-struct inode_operations pnlfs_file_inode_operations = {};
+struct inode_operations pnlfs_file_inode_operations = {
+	.lookup = pnlfs_lookup,
+};
 struct file_operations pnlfs_file_operations = {};
 
