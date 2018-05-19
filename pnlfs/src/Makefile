@@ -9,8 +9,8 @@ ifneq ($(KERNELRELEASE),)
 
 obj-m += pnlfs.o
 
-pnlfs-objs := super.o
-ccflags-y := -DDEBUG
+pnlfs-objs := super.o structs.o
+ccflags-y := -DDEBUG -Og
 
 else
 	
