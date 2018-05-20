@@ -19,11 +19,10 @@
 #include "pnlfs.h"
 
 static struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino);
-struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
 static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
 	unsigned int flags);
 
-ino_t get_ino_from_name(struct inode *dir, const char *name)
+ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 {
 	struct pnlfs_inode_info		*pnli;
 	uint32_t			nr_entries;
@@ -156,7 +155,7 @@ static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
 	struct inode	*inode;
 
 	/* Find the inode number of the file to be found (aka target file) */
-	ino = get_ino_from_name(dir, dentry->d_name.name);
+	ino = pnlfs_get_ino_from_name(dir, dentry->d_name.name);
 
 	/* Get the inode of the target file */
 	inode = pnlfs_iget(dir->i_sb, ino);

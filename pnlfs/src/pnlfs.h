@@ -97,7 +97,7 @@ typedef unsigned long	ulong;
 
 /* inode.c */
 extern struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
-extern ino_t get_ino_from_name(struct inode *dir, const char *name);
+extern ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name);
 
 /* file.c */
 
