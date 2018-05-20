@@ -18,58 +18,12 @@
 
 #include "pnlfs.h"
 
-static int pnlfs_iterate_shared(struct file *file, struct dir_context *ctx);
-static ino_t get_ino_from_name(struct inode *dir, const char *name);
-static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
-	unsigned int flags);
 static struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino);
 struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
+static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
+	unsigned int flags);
 
-/*
- * This function fills 'ctx' with all the files present in the dir 'file'
- */
-static int pnlfs_iterate_shared(struct file *fdir, struct dir_context *ctx)
-{
-	struct inode		*idir;
-	struct pnlfs_inode_info	*pnli;
-	int			nr_entries;
-	sector_t		blkno;
-	struct buffer_head	*bh;
-	struct pnlfs_file	*rows;
-	char			*name;
-	int			namelen;
-	ino_t			ino;
-	unsigned char		d_type;
-	int			i;
-
-	/* Add the .. directory */
-	if (!dir_emit_dots(fdir, ctx))
-		return 0;
-
-	/* Get the block where our directory's filelist is stored */
-	idir = file_inode(fdir);
-	pnli = container_of(idir, struct pnlfs_inode_info,  vfs_inode);
-	nr_entries = pnli->nr_entries;
-	blkno = pnli->index_block;
-	bh = sb_bread(idir->i_sb, blkno);
-
-	/* Iterate over our filelist */
-	rows = (struct pnlfs_file *)bh->b_data;
-	i = ctx->pos - 2;
-	if (i < nr_entries) {
-		name = rows[i].filename;
-		namelen = strnlen(name, PNLFS_FILENAME_LEN);
-		ino = rows[i].inode;
-		d_type = DT_UNKNOWN;
-		if(dir_emit(ctx, name, namelen, ino, d_type))
-			ctx->pos++;
-	}
-
-	brelse(bh);
-	return 0;
-}
-
-static ino_t get_ino_from_name(struct inode *dir, const char *name)
+ino_t get_ino_from_name(struct inode *dir, const char *name)
 {
 	struct pnlfs_inode_info		*pnli;
 	uint32_t			nr_entries;
@@ -99,33 +53,6 @@ static ino_t get_ino_from_name(struct inode *dir, const char *name)
 			return le32_to_cpu(rows[i].inode);
 	}
 	return -1;
-}
-
-/*
- * This function returns the dentry refering to the file named after
- * the name found in dentry->d_name, in the parent directory refered
- * by dir
- *
- * @dir:    The inode of the parent directory in which this function must
- *          find the file named dentry->d_name
- * @dentry: The negative (="empty", "yet-to-be-filled") dentry of the file
- *          whose inode must be found by this function
- */
-static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
-	unsigned int flags)
-{
-	ino_t		ino;
-	struct inode	*inode;
-
-	/* Find the inode number of the file to be found (aka target file) */
-	ino = get_ino_from_name(dir, dentry->d_name.name);
-
-	/* Get the inode of the target file */
-	inode = pnlfs_iget(dir->i_sb, ino);
-
-	/* Fill the dentry from the retrieved inode */
-	d_add(dentry, inode);
-	return dentry;
 }
 
 /*
@@ -202,11 +129,39 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino)
 	return vfsi;
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* --------- INODE OPERATIONS ----------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * This function returns the dentry refering to the file named after
+ * the name found in dentry->d_name, in the parent directory refered
+ * by dir
+ *
+ * @dir:    The inode of the parent directory in which this function must
+ *          find the file named dentry->d_name
+ * @dentry: The negative (="empty", "yet-to-be-filled") dentry of the file
+ *          whose inode must be found by this function
+ */
+static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
+	unsigned int flags)
+{
+	ino_t		ino;
+	struct inode	*inode;
+
+	/* Find the inode number of the file to be found (aka target file) */
+	ino = get_ino_from_name(dir, dentry->d_name.name);
+
+	/* Get the inode of the target file */
+	inode = pnlfs_iget(dir->i_sb, ino);
+
+	/* Fill the dentry from the retrieved inode */
+	d_add(dentry, inode);
+	return dentry;
+}
+
 struct inode_operations pnlfs_file_inode_operations = {
 	.lookup = pnlfs_lookup,
-};
-
-struct file_operations pnlfs_file_operations = {
-	.iterate_shared = pnlfs_iterate_shared,
 };
 

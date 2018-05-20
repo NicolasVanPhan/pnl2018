@@ -91,18 +91,17 @@ struct pnlfs_dir_block {
 
 typedef unsigned long	ulong;
 
-/*
- * Function prototypes
- */
+/* ------------ Function prototypes ------------------------------------------*/
 
 /* super.c */
 
 /* inode.c */
 extern struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
+extern ino_t get_ino_from_name(struct inode *dir, const char *name);
 
-/*
- * Inode and file operations
- */
+/* file.c */
+
+/* ------------ Inode and file operations ------------------------------------*/
 
 extern struct inode_operations pnlfs_file_inode_operations;
 extern struct file_operations pnlfs_file_operations;
