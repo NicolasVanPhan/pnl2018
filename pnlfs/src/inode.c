@@ -18,11 +18,56 @@
 
 #include "pnlfs.h"
 
+static int pnlfs_iterate_shared(struct file *file, struct dir_context *ctx);
 static ino_t get_ino_from_name(struct inode *dir, const char *name);
 static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
 	unsigned int flags);
 static struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino);
 struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
+
+/*
+ * This function fills 'ctx' with all the files present in the dir 'file'
+ */
+static int pnlfs_iterate_shared(struct file *fdir, struct dir_context *ctx)
+{
+	struct inode		*idir;
+	struct pnlfs_inode_info	*pnli;
+	int			nr_entries;
+	sector_t		blkno;
+	struct buffer_head	*bh;
+	struct pnlfs_file	*rows;
+	char			*name;
+	int			namelen;
+	ino_t			ino;
+	unsigned char		d_type;
+	int			i;
+
+	/* Add the .. directory */
+	if (!dir_emit_dots(fdir, ctx))
+		return 0;
+
+	/* Get the block where our directory's filelist is stored */
+	idir = file_inode(fdir);
+	pnli = container_of(idir, struct pnlfs_inode_info,  vfs_inode);
+	nr_entries = pnli->nr_entries;
+	blkno = pnli->index_block;
+	bh = sb_bread(idir->i_sb, blkno);
+
+	/* Iterate over our filelist */
+	rows = (struct pnlfs_file *)bh->b_data;
+	i = ctx->pos - 2;
+	if (i < nr_entries) {
+		name = rows[i].filename;
+		namelen = strnlen(name, PNLFS_FILENAME_LEN);
+		ino = rows[i].inode;
+		d_type = DT_UNKNOWN;
+		if(dir_emit(ctx, name, namelen, ino, d_type))
+			ctx->pos++;
+	}
+
+	brelse(bh);
+	return 0;
+}
 
 static ino_t get_ino_from_name(struct inode *dir, const char *name)
 {
@@ -124,6 +169,7 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino)
 {
 	struct inode		*vfsi;
 	struct pnlfs_inode	*pnli;
+	struct pnlfs_inode_info	*pnlii;
 
 	vfsi = iget_locked(sb, ino);
 	if (vfsi == NULL)
@@ -147,6 +193,9 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino)
 	vfsi->i_atime = CURRENT_TIME;
 	vfsi->i_mtime = CURRENT_TIME;
 	vfsi->i_ctime = CURRENT_TIME;
+	pnlii = container_of(vfsi, struct pnlfs_inode_info, vfs_inode);
+	pnlii->index_block = le32_to_cpu(pnli->index_block);
+	pnlii->nr_entries = le32_to_cpu(pnli->nr_entries);
 
 	kfree(pnli);
 	unlock_new_inode(vfsi);
@@ -156,5 +205,8 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino)
 struct inode_operations pnlfs_file_inode_operations = {
 	.lookup = pnlfs_lookup,
 };
-struct file_operations pnlfs_file_operations = {};
+
+struct file_operations pnlfs_file_operations = {
+	.iterate_shared = pnlfs_iterate_shared,
+};
 
