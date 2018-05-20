@@ -31,6 +31,7 @@ ino_t get_ino_from_name(struct inode *dir, const char *name)
 	struct buffer_head		*bh;
 	struct pnlfs_file		*rows;
 	int				i;
+	ino_t				ret;
 
 	if (strnlen(name, PNLFS_FILENAME_LEN) == PNLFS_FILENAME_LEN) {
 		pr_err("Filename too long\n");
@@ -47,12 +48,16 @@ ino_t get_ino_from_name(struct inode *dir, const char *name)
 	bh = sb_bread(dir->i_sb, blkno);
 
 	/* Read the block to find the ino matching our filename */
+	ret = -1;
 	rows = (struct pnlfs_file *)bh->b_data;
 	for (i = 0; i < nr_entries; i++) {
-		if (!strncmp(rows[i].filename, name, PNLFS_FILENAME_LEN))
-			return le32_to_cpu(rows[i].inode);
+		if (!strncmp(rows[i].filename, name, PNLFS_FILENAME_LEN)) {
+			ret = le32_to_cpu(rows[i].inode);
+			break;
+		}
 	}
-	return -1;
+	brelse(bh);
+	return ret;
 }
 
 /*
