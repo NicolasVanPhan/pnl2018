@@ -97,7 +97,8 @@ static int pnlfs_create(struct inode *dir, struct dentry *de,
 	struct inode	*inode;
 	ino_t		ino;
 
-	ino = pnlfs_get_free_ino(dir->i_sb);
+	/* Get a new inode */
+	ino = pnlfs_get_first_free_ino(dir->i_sb);
 	if (ino < 0)
 		return -1;
 	inode = pnlfs_alloc_inode(dir->i_sb);

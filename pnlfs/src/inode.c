@@ -5,7 +5,7 @@
 ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name);
 void	pnlfs_set_inode_state(struct super_block *sb, ino_t ino, char val);
 int	pnlfs_get_inode_state(struct super_block *sb, ino_t ino);
-ino_t	pnlfs_get_free_ino(struct super_block *sb);
+ino_t	pnlfs_get_first_free_ino(struct super_block *sb);
 int	pnlfs_set_inode(struct super_block, struct pnlfs_inode, ino_t);
 struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino);
 */
@@ -103,7 +103,7 @@ int pnlfs_get_inode_state(struct super_block *sb, ino_t ino)		 // [DONE]
 /*
  * This function gets the ino of the first free inode on the disk
  */
-ino_t pnlfs_get_free_ino(struct super_block *sb)				 // [DONE]
+ino_t pnlfs_get_first_free_ino(struct super_block *sb)				 // [DONE]
 {
 	struct pnlfs_sb_info	*psbi;
 	ino_t			ino;
