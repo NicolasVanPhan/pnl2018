@@ -1,6 +1,23 @@
 #ifndef _PNLFS_H
 #define _PNLFS_H
 
+#include <linux/module.h>
+//#include <linux/string.h>
+#include <linux/fs.h>
+#include <linux/slab.h>
+#include <linux/init.h>
+//#include <linux/blkdev.h>
+//#include <linux/parser.h>
+//#include <linux/random.h>
+#include <linux/buffer_head.h>
+//#include <linux/exportfs.h>
+#include <linux/vfs.h>
+//#include <linux/seq_file.h>
+//#include <linux/mount.h>
+//#include <linux/log2.h>
+//#include <linux/quotaops.h>
+//#include <asm/uaccess.h>
+
 #define PNLFS_MAGIC           0x434F5746
 
 #define PNLFS_SB_BLOCK_NR              0
@@ -94,12 +111,22 @@ typedef unsigned long	ulong;
 /* ------------ Function prototypes ------------------------------------------*/
 
 /* super.c */
+struct inode *pnlfs_alloc_inode(struct super_block *sb);
+
+/* iops.c */
+struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
+
+/* fops.c */
+
+/* block.c */
 
 /* inode.c */
-extern struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
-extern ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name);
-
-/* file.c */
+ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name);
+void	pnlfs_set_inode_state(struct super_block *sb, ino_t ino, char val);
+int	pnlfs_get_inode_state(struct super_block *sb, ino_t ino);
+ino_t	pnlfs_get_free_ino(struct super_block *sb);
+int	pnlfs_set_inode(struct super_block *, struct pnlfs_inode *, ino_t);
+struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino);
 
 /* ------------ Inode and file operations ------------------------------------*/
 

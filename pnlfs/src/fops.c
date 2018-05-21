@@ -1,21 +1,4 @@
 
-#include <linux/module.h>
-//#include <linux/string.h>
-#include <linux/fs.h>
-#include <linux/slab.h>
-#include <linux/init.h>
-//#include <linux/blkdev.h>
-//#include <linux/parser.h>
-//#include <linux/random.h>
-#include <linux/buffer_head.h>
-//#include <linux/exportfs.h>
-#include <linux/vfs.h>
-//#include <linux/seq_file.h>
-//#include <linux/mount.h>
-//#include <linux/log2.h>
-//#include <linux/quotaops.h>
-//#include <asm/uaccess.h>
-
 #include "pnlfs.h"
 
 static int pnlfs_iterate_shared(struct file *file, struct dir_context *ctx);		// dir.c

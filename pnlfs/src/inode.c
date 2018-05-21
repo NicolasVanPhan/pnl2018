@@ -1,26 +1,14 @@
 
-#include <linux/module.h>
-//#include <linux/string.h>
-#include <linux/fs.h>
-#include <linux/slab.h>
-#include <linux/init.h>
-//#include <linux/blkdev.h>
-//#include <linux/parser.h>
-//#include <linux/random.h>
-#include <linux/buffer_head.h>
-//#include <linux/exportfs.h>
-#include <linux/vfs.h>
-//#include <linux/seq_file.h>
-//#include <linux/mount.h>
-//#include <linux/log2.h>
-//#include <linux/quotaops.h>
-//#include <asm/uaccess.h>
-
 #include "pnlfs.h"
 
-static struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino);
-static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
-	unsigned int flags);
+/*
+ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name);
+void	pnlfs_set_inode_state(struct super_block *sb, ino_t ino, char val);
+int	pnlfs_get_inode_state(struct super_block *sb, ino_t ino);
+ino_t	pnlfs_get_free_ino(struct super_block *sb);
+int	pnlfs_set_inode(struct super_block, struct pnlfs_inode, ino_t);
+struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino);
+*/
 
 ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 {
@@ -60,9 +48,136 @@ ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 }
 
 /*
+ * Sets the bit corresponding to inode 'ino' in the ifree bitmap
+ */
+void pnlfs_set_inode_state(struct super_block *sb, ino_t ino, char val)	 // [DONE]
+{
+	struct pnlfs_sb_info	*psbi;
+	sector_t		blkfirst;
+	sector_t		blkno;
+	ulong			byteno;
+	int			bitno;
+	char			*byte;
+	struct buffer_head	*bh;
+
+	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
+	blkfirst = 1 + psbi->nr_istore_blocks;
+	blkno = blkfirst + (ino / sizeof(char)) / PNLFS_BLOCK_SIZE;
+	byteno = (ino / sizeof(char)) % PNLFS_BLOCK_SIZE;
+	bitno = ino % sizeof(char);
+
+	bh = sb_bread(sb, blkno);
+	byte = &((char *)bh->b_data)[byteno];
+	*byte &= ~(1 << bitno);
+	if (val)
+		*byte |= (1 << bitno);
+	mark_buffer_dirty(bh);
+	brelse(bh);
+}
+
+/*
+ * Returns the bit corresponding to inode 'ino' in the ifree bitmap
+ */
+int pnlfs_get_inode_state(struct super_block *sb, ino_t ino)		 // [DONE]
+{
+	struct pnlfs_sb_info	*psbi;
+	sector_t		blkfirst;
+	sector_t		blkno;
+	ulong			byteno;
+	int			bitno;
+	struct buffer_head	*bh;
+	char			val;
+
+	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
+	blkfirst = 1 + psbi->nr_istore_blocks;
+	blkno = blkfirst + (ino / sizeof(char)) / PNLFS_BLOCK_SIZE;
+	byteno = (ino / sizeof(char)) % PNLFS_BLOCK_SIZE;
+	bitno = ino % sizeof(char);
+
+	bh = sb_bread(sb, blkno);
+	val = ((char *)bh->b_data)[byteno] & bitno;
+	brelse(bh);
+	return val;
+}
+
+/*
+ * This function gets the ino of the first free inode on the disk
+ */
+ino_t pnlfs_get_free_ino(struct super_block *sb)				 // [DONE]
+{
+	struct pnlfs_sb_info	*psbi;
+	ino_t			ino;
+	sector_t		blkno;
+	sector_t		blkfirst;
+	sector_t		blklast;
+	struct buffer_head	*bh;
+	unsigned long		nb_rows_per_block; // how many rows in a blk
+	unsigned long		nb_total_rows;  // how many rows in total
+	unsigned long		nb_rows;	// how many rows in current blk
+	unsigned long		*addr;
+
+	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
+	blkfirst = 1 + psbi->nr_istore_blocks;
+	blklast= 1 + psbi->nr_istore_blocks + psbi->nr_ifree_blocks;
+	nb_rows_per_block = PNLFS_BLOCK_SIZE / sizeof(unsigned long);
+	nb_total_rows = psbi->nr_inodes / sizeof(unsigned long);
+
+	/* For each ifree block */
+	for (blkno = blkfirst; blkno < blklast; blkno++) {
+		/* Read the current ifree block */
+		bh = sb_bread(sb, blkno);
+		addr = (unsigned long *)bh->b_data;
+
+		/* Get how many rows we have in the current block */
+		nb_rows = nb_rows_per_block;
+		if (blkno == blklast - 1) // Last ifree block may not be full */
+			nb_rows = nb_total_rows % nb_rows_per_block;
+
+		/* Look for the first free inode */
+		ino = find_first_bit(addr, nb_rows);
+		brelse(bh);
+
+		/* If we found a free inode, bingo */
+		if (ino < nb_rows)
+			return ino;
+
+	}
+	pr_warn("Disk full : no inode available\n");
+	return -1;
+}
+
+/*
+ * This function writes a pnlfs inode on a pnlfs image
+ */
+int pnlfs_set_inode(struct super_block *sb,				 // [DONE]
+	struct pnlfs_inode *pnli ,ino_t ino)
+{
+	struct pnlfs_sb_info	*psbi;
+	sector_t		blkno;
+	struct buffer_head	*bh;
+	int			row; // inode row in disk block
+
+	if (pnli == NULL)
+		return -EINVAL;
+	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
+	if (ino < 0 || ino >= psbi->nr_inodes)
+		return -EINVAL;
+	blkno = 1 + ino / PNLFS_INODES_PER_BLOCK;
+	bh = sb_bread(sb,  blkno);
+	if (bh == NULL)
+		return -EIO;
+	row = ino % PNLFS_INODES_PER_BLOCK;
+
+	((struct pnlfs_inode *)bh->b_data)[row] = *pnli;
+	mark_buffer_dirty(bh);
+	brelse(bh);
+	return 0;
+}
+
+/*
  * This function reads a pnlfs inode on a pnlfs image
  */
-static struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino)
+struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino)
 {
 	struct pnlfs_sb_info	*psbi;
 	sector_t		blkno;
@@ -92,80 +207,4 @@ static struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino)
 	return pnli;
 }
 
-/*
- * This function gets the inode with number 'ino'
- * If the inode wasn't cached already, it initializes it
- */
-struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino)
-{
-	struct inode		*vfsi;
-	struct pnlfs_inode	*pnli;
-	struct pnlfs_inode_info	*pnlii;
-
-	vfsi = iget_locked(sb, ino);
-	if (vfsi == NULL)
-		return (struct inode*)ERR_PTR(-ENOMEM);
-	/* If the inode was already cached, return it directly */
-	if ((vfsi->i_state & I_NEW) == 0)
-		return vfsi;
-	/* Otherwise initialize it */
-	pnli = pnlfs_get_inode(sb, ino);
-	if (IS_ERR(pnli)){
-		iget_failed(vfsi);
-		return (struct inode *)pnli;
-	}
-	vfsi->i_mode = le32_to_cpu(pnli->mode);
-	vfsi->i_op = &pnlfs_file_inode_operations;
-	vfsi->i_fop = &pnlfs_file_operations;
-	vfsi->i_sb = sb;
-	vfsi->i_ino = ino;
-	vfsi->i_size = le32_to_cpu(pnli->filesize);
-	vfsi->i_blocks = (blkcnt_t)le32_to_cpu(pnli->nr_used_blocks);
-	vfsi->i_atime = CURRENT_TIME;
-	vfsi->i_mtime = CURRENT_TIME;
-	vfsi->i_ctime = CURRENT_TIME;
-	pnlii = container_of(vfsi, struct pnlfs_inode_info, vfs_inode);
-	pnlii->index_block = le32_to_cpu(pnli->index_block);
-	pnlii->nr_entries = le32_to_cpu(pnli->nr_entries);
-
-	kfree(pnli);
-	unlock_new_inode(vfsi);
-	return vfsi;
-}
-
-
-/* -------------------------------------------------------------------------- */
-/* --------- INODE OPERATIONS ----------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-
-/*
- * This function returns the dentry refering to the file named after
- * the name found in dentry->d_name, in the parent directory refered
- * by dir
- *
- * @dir:    The inode of the parent directory in which this function must
- *          find the file named dentry->d_name
- * @dentry: The negative (="empty", "yet-to-be-filled") dentry of the file
- *          whose inode must be found by this function
- */
-static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
-	unsigned int flags)
-{
-	ino_t		ino;
-	struct inode	*inode;
-
-	/* Find the inode number of the file to be found (aka target file) */
-	ino = pnlfs_get_ino_from_name(dir, dentry->d_name.name);
-
-	/* Get the inode of the target file */
-	inode = pnlfs_iget(dir->i_sb, ino);
-
-	/* Fill the dentry from the retrieved inode */
-	d_add(dentry, inode);
-	return dentry;
-}
-
-struct inode_operations pnlfs_file_inode_operations = {
-	.lookup = pnlfs_lookup,
-};
 

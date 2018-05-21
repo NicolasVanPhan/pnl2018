@@ -7,28 +7,21 @@
  *
  */
 
-#include <linux/module.h>
-//#include <linux/string.h>
-#include <linux/fs.h>
-#include <linux/slab.h>
-#include <linux/init.h>
-//#include <linux/blkdev.h>
-//#include <linux/parser.h>
-//#include <linux/random.h>
-#include <linux/buffer_head.h>
-//#include <linux/exportfs.h>
-#include <linux/vfs.h>
-//#include <linux/seq_file.h>
-//#include <linux/mount.h>
-//#include <linux/log2.h>
-//#include <linux/quotaops.h>
-//#include <asm/uaccess.h>
-
 #include "pnlfs.h"
 
 MODULE_AUTHOR("Nicolas Phan");
 MODULE_DESCRIPTION("A filesystem");
 MODULE_LICENSE("GPL");
+
+/*
+struct inode *pnlfs_alloc_inode(struct super_block *sb);
+*/
+
+static void pnlfs_put_super(struct super_block *sb);
+static void pnlfs_destroy_inode(struct inode *vfsi);
+static int pnlfs_fill_super(struct super_block *sb, void *data, int silent);
+static struct dentry *pnlfs_mount(struct file_system_type *fs_type,
+	int flags, const char *dev_name, void *data);
 
 /* -------------------------------------------------------------------------- */
 /* --------- Superblock Operations ------------------------------------------ */
@@ -51,7 +44,7 @@ static void pnlfs_put_super(struct super_block *sb)
 /*
  * This functions allocates a new pnlfs inode
  */
-static struct inode *pnlfs_alloc_inode(struct super_block *sb)
+struct inode *pnlfs_alloc_inode(struct super_block *sb)
 {
 	struct pnlfs_inode_info *pnli;
 
@@ -61,6 +54,8 @@ static struct inode *pnlfs_alloc_inode(struct super_block *sb)
 		return NULL;
 	}
 	inode_init_once(&pnli->vfs_inode);
+	pnli->index_block = 0;
+	pnli->nr_entries = 0;
 	return &pnli->vfs_inode;
 }
 
