@@ -91,37 +91,69 @@ static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
  * This function creates a new inode and attaches it to the the negative dentry
  * given as a parameter.
  */
+/*
 static int pnlfs_create(struct inode *dir, struct dentry *de,
 	umode_t mode, bool excl)
 {
-	struct inode	*inode;
-	ino_t		ino;
+	struct inode		*inode;
+	struct pnlfs_inode_info *pnlii;
+	struct pnlfs_dir_block	*pnldb;
+	struct pnlfs_file	*pnlentries;
+	struct pnlfs_file	*entry;
+	ino_t			ino;
 
-	/* Get a new inode */
-	ino = pnlfs_get_first_free_ino(dir->i_sb);
+	// Get a new inode
+	ino = pnlfs_get_first_free_ino(dir->i_sb)
 	if (ino < 0)
 		return -1;
 	inode = pnlfs_alloc_inode(dir->i_sb);
 	if (inode == NULL)
 		return -1;
+
+	// Fill the new inode
 	inode->i_mode = mode;
 	inode->i_op = &pnlfs_file_inode_operations;
 	inode->i_fop = &pnlfs_file_operations;
 	inode->i_sb = dir->i_sb;
 	inode->i_ino = ino;
-	inode->i_size = 0;
-	inode->i_blocks = 0;
 	inode->i_atime = CURRENT_TIME;
 	inode->i_mtime = CURRENT_TIME;
 	inode->i_ctime = CURRENT_TIME;
-
+	inode->i_size = 0;
+	inode->i_blocks = 0;
 	mark_inode_dirty(inode);
+
+	// Get the disk block of the directory
+	inode = pnlfs_iget(dir->sb, dir->i_ino);
+	if (IS_ERR(inode))
+		return -1;
+	pnlii = container_of(inode, struct pnlfs_inode_info, vfs_inode);
+	pnldb = pnlfs_read_dir_block(dir->i_sb, pnlii->index_block);
+	if (IS_ERR(pnldb))
+		return -1;
+
+	// Add the new file to the directory in the disk
+	pnlentries = (struct pnlfs_files *)pnldb;
+	if (pnlii->nr_entries >= PNLFS_MAX_DIR_ENTRIES) {
+		pr_err("Too many entries in this directory\n");
+		return -1;
+	}
+	entry = &pnlfiles[pnlii->nr_entries];
+	entry->inode = cpu_to_le32(ino);
+	strncpy(entry->filename, de->d_name.name, PNLFS_FILENAME_LEN)
+	pnlii->nr_entries++;
+
+	//Write back all changes
+	pnlfs_write_dir_block(dir->i_sb, pnlii->index_block, pnldb);
+	mark_buffer_dirty(inode);
+	pnlfs_write_inode_state(dir->i_sb, ino, 0);
 	d_instantiate(de, inode);
 	return 0;
 }
+*/
 
 struct inode_operations pnlfs_file_inode_operations = {
 	.lookup = pnlfs_lookup,
-	.create = pnlfs_create,
+//	.create = pnlfs_create,
 };
 
