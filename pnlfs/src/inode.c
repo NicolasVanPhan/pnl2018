@@ -3,11 +3,12 @@
 
 /*
 ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name);
-void	pnlfs_set_inode_state(struct super_block *sb, ino_t ino, char val);
-int	pnlfs_get_inode_state(struct super_block *sb, ino_t ino);
+void	pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val);
+int	pnlfs_read_inode_state(struct super_block *sb, ino_t ino);
 ino_t	pnlfs_get_first_free_ino(struct super_block *sb);
-int	pnlfs_set_inode(struct super_block, struct pnlfs_inode, ino_t);
-struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino);
+int	pnlfs_write_inode(struct super_block, struct pnlfs_inode, ino_t);
+struct pnlfs_inode
+	*pnlfs_read_inode(struct super_block *sb, ino_t ino);
 */
 
 ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name)
@@ -50,7 +51,7 @@ ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 /*
  * Sets the bit corresponding to inode 'ino' in the ifree bitmap
  */
-void pnlfs_set_inode_state(struct super_block *sb, ino_t ino, char val)	 // [DONE]
+void pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val)	 // [DONE]
 {
 	struct pnlfs_sb_info	*psbi;
 	sector_t		blkfirst;
@@ -78,7 +79,7 @@ void pnlfs_set_inode_state(struct super_block *sb, ino_t ino, char val)	 // [DON
 /*
  * Returns the bit corresponding to inode 'ino' in the ifree bitmap
  */
-int pnlfs_get_inode_state(struct super_block *sb, ino_t ino)		 // [DONE]
+int pnlfs_read_inode_state(struct super_block *sb, ino_t ino)		 // [DONE]
 {
 	struct pnlfs_sb_info	*psbi;
 	sector_t		blkfirst;
@@ -149,7 +150,7 @@ ino_t pnlfs_get_first_free_ino(struct super_block *sb)				 // [DONE]
 /*
  * This function writes a pnlfs inode on a pnlfs image
  */
-int pnlfs_set_inode(struct super_block *sb,				 // [DONE]
+int pnlfs_write_inode(struct super_block *sb,				 // [DONE]
 	struct pnlfs_inode *pnli ,ino_t ino)
 {
 	struct pnlfs_sb_info	*psbi;
@@ -177,7 +178,7 @@ int pnlfs_set_inode(struct super_block *sb,				 // [DONE]
 /*
  * This function reads a pnlfs inode on a pnlfs image
  */
-struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino)
+struct pnlfs_inode *pnlfs_read_inode(struct super_block *sb, ino_t ino)
 {
 	struct pnlfs_sb_info	*psbi;
 	sector_t		blkno;
@@ -187,19 +188,19 @@ struct pnlfs_inode *pnlfs_get_inode(struct super_block *sb, ino_t ino)
 
 	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
 	if (ino < 0 || ino >= psbi->nr_inodes) {
-		pr_err("pnlfs_get_inode() : Inode out of range\n");
+		pr_err("pnlfs_read_inode() : Inode out of range\n");
 		return ERR_PTR(-EINVAL);
 	}
 	blkno = 1 + ino / PNLFS_INODES_PER_BLOCK;
 	bh = sb_bread(sb,  blkno);
 	if (bh == NULL) {
-		pr_err("pnlfs_get_inode() : Block %ld read failed\n", blkno);
+		pr_err("pnlfs_read_inode() : Block %ld read failed\n", blkno);
 		return ERR_PTR(-EIO);
 	}
 	row = ino % PNLFS_INODES_PER_BLOCK;
 	pnli = kmalloc(sizeof(struct pnlfs_inode), GFP_KERNEL);
 	if (pnli == NULL) {
-		pr_err("pnlfs_get_inode() : Kmalloc failed\n");
+		pr_err("pnlfs_read_inode() : Kmalloc failed\n");
 		return ERR_PTR(-ENOMEM);
 	}
 	*pnli = ((struct pnlfs_inode *)bh->b_data)[row];

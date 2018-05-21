@@ -28,7 +28,7 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino)
 	if ((vfsi->i_state & I_NEW) == 0)
 		return vfsi;
 	/* Otherwise initialize it */
-	pnli = pnlfs_get_inode(sb, ino);
+	pnli = pnlfs_read_inode(sb, ino);
 	if (IS_ERR(pnli)){
 		iget_failed(vfsi);
 		return (struct inode *)pnli;
