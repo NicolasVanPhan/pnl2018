@@ -73,7 +73,7 @@ static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
 	struct inode	*inode;
 
 	/* Find the inode number of the file to be found (aka target file) */
-	ino = pnlfs_get_ino_from_name(dir, dentry->d_name.name);
+	ino = pnlfs_dir_get_ino(dir, dentry->d_name.name);
 	if (ino == INO_ERR) {
 		d_add(dentry, NULL);
 		return dentry;
@@ -180,6 +180,7 @@ static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
 	long			state;
 	struct pnlfs_inode 	pi2write;
 	struct pnlfs_inode 	*pi2read;
+	char			name[PNLFS_FILENAME_LEN];
 
 
 	while (gdbloop) {
@@ -226,6 +227,26 @@ static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
 			case 8: // get_first_free_bno
 				rsp = pnlfs_get_first_free_bno(idir->i_sb);
 				pr_info("rsp: %ld\n", rsp);
+				break;
+			case 9: // dir_get_ino					 CHECK
+				rsp = pnlfs_dir_get_ino(idir, name);
+				pr_info("ino : %ld\n", rsp);
+				break;
+			case 10: // dir_add
+				rsp = pnlfs_dir_add(idir, name, no);
+				pr_info("rsp : %ld\n", rsp);
+				break;
+			case 11: // dir_rm
+				rsp = pnlfs_dir_rm(idir, no);
+				pr_info("rsp : %ld\n", rsp);
+				break;
+			case 12: // dir_set_name
+				rsp = pnlfs_dir_set_name(idir, no, name);
+				pr_info("rsp : %ld\n", rsp);
+				break;
+			case 13: // dir_get_name
+				rsp = pnlfs_dir_get_name(idir, no, name);
+				pr_info("rsp : %ld\n", rsp);
 				break;
 		}
 	}

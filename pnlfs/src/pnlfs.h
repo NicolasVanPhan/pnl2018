@@ -28,6 +28,7 @@
 #define PNLFS_MAX_DIR_ENTRIES        128
 
 #define INO_ERR			((unsigned long)-1)
+#define INO_UNFOUND		((unsigned long)-2)
 
 
 /*
@@ -124,7 +125,11 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
 
 /* inode.c */
 
-ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name);
+int	pnlfs_dir_rm(struct inode *dir, ino_t ino);
+int	pnlfs_dir_add(struct inode *dir, const char *name, ino_t ino);
+int	pnlfs_dir_set_name(struct inode *dir, ino_t ino, char *src);
+int	pnlfs_dir_get_name(struct inode *dir, ino_t ino, char *dest);
+ino_t	pnlfs_dir_get_ino(struct inode *dir, const char *name);
 
 int	pnlfs_write_block_state(struct super_block *sb, sector_t bno, char val);
 int	pnlfs_read_block_state(struct super_block *sb, sector_t bno);
