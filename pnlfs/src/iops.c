@@ -11,6 +11,9 @@ static struct dentry
 static int
 pnlfs_create(struct inode *dir, struct dentry *de, umode_t mode, bool excl);
 
+static int
+pnlfs_unlink(struct inode *dir, struct dentry *de);
+
 /*
  * This function writes an inode back to the disk
  */
@@ -209,6 +212,16 @@ static int pnlfs_unlink(struct inode *dir, struct dentry *de)
 	return 0;
 }
 
+static int pnlfs_mkdir(struct inode *dir, struct dentry *de, umode_t mode)
+{
+	return pnlfs_create(dir, de, mode | S_IFDIR, 0);
+}
+
+static int pnlfs_rmdir(struct inode *dir, struct dentry *de)
+{
+	return pnlfs_unlink(dir, de);
+}
+
 
 /* FOR THE MOMENT THIS FUNCTION IS JUST AN INTERFACE FOR TESTING INODE.C */
 static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
@@ -312,5 +325,7 @@ struct inode_operations pnlfs_file_inode_operations = {
 	.create = pnlfs_create,
 	.rename = pnlfs_rename,
 	.unlink = pnlfs_unlink,
+	.mkdir = pnlfs_mkdir,
+	.rmdir = pnlfs_rmdir,
 };
 
