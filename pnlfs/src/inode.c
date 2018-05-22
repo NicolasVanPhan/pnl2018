@@ -278,6 +278,7 @@ int pnlfs_write_block_state(struct super_block *sb, sector_t bno, char val)
 	int			nb_rows_per_block;
 	int			bitno;
 	struct buffer_head	*bh;
+	int			oldval;
 	int			rowval;
 
 	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
@@ -295,9 +296,15 @@ int pnlfs_write_block_state(struct super_block *sb, sector_t bno, char val)
 	/* Writing the block state */
 	bh = sb_bread(sb, blkno);
 	rowval = le32_to_cpu(((unsigned int *)bh->b_data)[row]);
+	oldval = rowval & (1 << bitno);
 	rowval &= ~(1 << bitno);
 	if (val)
 		rowval |= (1 << bitno);
+	// Update superblock
+	if (val && !oldval)
+		psbi->nr_free_blocks++;
+	if (!val && oldval)
+		psbi->nr_free_blocks--;
 	((unsigned int *)bh->b_data)[row] = le32_to_cpu(rowval);
 	brelse(bh);
 	return 0;
@@ -409,6 +416,7 @@ int pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val)
 	int			bitno;
 	struct buffer_head	*bh;
 	int			rowval;
+	int			oldval;
 
 	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
 	if (ino >= psbi->nr_inodes)
@@ -425,9 +433,15 @@ int pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val)
 	/* Writing the inode state */
 	bh = sb_bread(sb, blkno);
 	rowval = le32_to_cpu(((unsigned int *)bh->b_data)[row]);
+	oldval = rowval & (1 << bitno);
 	rowval &= ~(1 << bitno);
 	if (val)
 		rowval |= (1 << bitno);
+	// Update superblock
+	if (val && !oldval)
+		psbi->nr_free_inodes++;
+	if (!val && oldval)
+		psbi->nr_free_inodes--;
 	((unsigned int *)bh->b_data)[row] = le32_to_cpu(rowval);
 	brelse(bh);
 	return 0;

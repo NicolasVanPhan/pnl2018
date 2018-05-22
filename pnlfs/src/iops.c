@@ -12,6 +12,32 @@ static int
 pnlfs_create(struct inode *dir, struct dentry *de, umode_t mode, bool excl);
 
 /*
+ * This function writes an inode back to the disk
+ */
+int pnlfs_iset(struct super_block *sb, struct inode *inode)
+{
+	struct pnlfs_inode_info	*pnlii;
+	struct pnlfs_inode	*pnli;
+	int			ret;
+
+	if (inode == NULL) {
+		pr_err("pnlfs_iset() : NULL inode\n");
+		return -EINVAL;
+	}
+	pnlii = container_of(inode, struct pnlfs_inode_info, vfs_inode);
+	pnli = kmalloc(sizeof(struct pnlfs_inode), GFP_KERNEL);
+
+	pnli->mode = cpu_to_le32(inode->i_mode);
+	pnli->filesize = cpu_to_le32(inode->i_size);
+	pnli->index_block = cpu_to_le32(pnlii->index_block);
+	pnli->nr_entries = cpu_to_le32(pnlii->nr_entries);
+	ret = pnlfs_write_inode(sb, pnli, inode->i_ino);
+
+	kfree(pnli);
+	return ret;
+}
+
+/*
  * This function gets the inode with number 'ino'
  * If the inode wasn't cached already, it initializes it
  */
@@ -95,22 +121,23 @@ static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
  * This function creates a new inode and attaches it to the the negative dentry
  * given as a parameter.
  */
-/*
 static int pnlfs_create(struct inode *dir, struct dentry *de,
 	umode_t mode, bool excl)
 {
+	struct super_block	*sb;
 	struct inode		*inode;
-	struct pnlfs_inode_info *pnlii;
-	struct pnlfs_dir_block	*pnldb;
-	struct pnlfs_file	*pnlentries;
-	struct pnlfs_file	*entry;
+	struct pnlfs_inode_info	*pnlii;
 	ino_t			ino;
+	sector_t		bno;
+	int			ret;
+
+	sb = dir->i_sb;
 
 	// Get a new inode
-	ino = pnlfs_get_first_free_ino(dir->i_sb)
+	ino = pnlfs_get_first_free_ino(sb);
 	if (ino < 0)
 		return -1;
-	inode = pnlfs_alloc_inode(dir->i_sb);
+	inode = pnlfs_iget(sb, ino);
 	if (inode == NULL)
 		return -1;
 
@@ -118,44 +145,39 @@ static int pnlfs_create(struct inode *dir, struct dentry *de,
 	inode->i_mode = mode;
 	inode->i_op = &pnlfs_file_inode_operations;
 	inode->i_fop = &pnlfs_file_operations;
-	inode->i_sb = dir->i_sb;
+	inode->i_sb = sb;
 	inode->i_ino = ino;
 	inode->i_atime = CURRENT_TIME;
 	inode->i_mtime = CURRENT_TIME;
 	inode->i_ctime = CURRENT_TIME;
 	inode->i_size = 0;
 	inode->i_blocks = 0;
-	mark_inode_dirty(inode);
-
-	// Get the disk block of the directory
-	inode = pnlfs_iget(dir->sb, dir->i_ino);
-	if (IS_ERR(inode))
-		return -1;
-	pnlii = container_of(inode, struct pnlfs_inode_info, vfs_inode);
-	pnldb = pnlfs_read_dir_block(dir->i_sb, pnlii->index_block);
-	if (IS_ERR(pnldb))
-		return -1;
 
 	// Add the new file to the directory in the disk
-	pnlentries = (struct pnlfs_files *)pnldb;
-	if (pnlii->nr_entries >= PNLFS_MAX_DIR_ENTRIES) {
-		pr_err("Too many entries in this directory\n");
-		return -1;
-	}
-	entry = &pnlfiles[pnlii->nr_entries];
-	entry->inode = cpu_to_le32(ino);
-	strncpy(entry->filename, de->d_name.name, PNLFS_FILENAME_LEN)
-	pnlii->nr_entries++;
+	ret = pnlfs_dir_add(dir, de->d_name.name, ino);
+	if (ret < 0)
+		return ret;
 
-	//Write back all changes
-	pnlfs_write_dir_block(dir->i_sb, pnlii->index_block, pnldb);
-	mark_buffer_dirty(inode);
-	pnlfs_write_inode_state(dir->i_sb, ino, 0);
+	// Find a free block for the file index block
+	bno = pnlfs_get_first_free_bno(sb);
+	if (bno < 0)
+		return -1;
+
+	// Attach the file index block to the inode
+	pnlii = container_of(inode, struct pnlfs_inode_info, vfs_inode);
+	pnlii->index_block = bno;
+	pnlii->nr_entries= 0;
+
+	// Write the new inode to the disk
+	pnlfs_iset(sb, inode);
+
+	// Write back
+	pnlfs_write_inode_state(sb, ino, 0);
+	pnlfs_write_block_state(sb, bno, 0);
 	d_instantiate(de, inode);
 	return 0;
 }
 
-*/
 
 /* FOR THE MOMENT THIS FUNCTION IS JUST AN INTERFACE FOR TESTING INODE.C */
 static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
@@ -256,7 +278,7 @@ static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
 
 struct inode_operations pnlfs_file_inode_operations = {
 	.lookup = pnlfs_lookup,
-//	.create = pnlfs_create,
-	.rename = pnlfs_rename,
+	.create = pnlfs_create,
+//	.rename = pnlfs_rename,
 };
 
