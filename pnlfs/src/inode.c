@@ -3,7 +3,7 @@
 
 /*
 ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name);
-void	pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val);
+int	pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val);
 int	pnlfs_read_inode_state(struct super_block *sb, ino_t ino);
 ino_t	pnlfs_get_first_free_ino(struct super_block *sb);
 int	pnlfs_write_inode(struct super_block, struct pnlfs_inode, ino_t);
@@ -51,29 +51,39 @@ ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 /*
  * Sets the bit corresponding to inode 'ino' in the ifree bitmap
  */
-void pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val)	 // [DONE]
+int pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val)	 // [DONE]
 {
 	struct pnlfs_sb_info	*psbi;
 	sector_t		blkfirst;
 	sector_t		blkno;
-	ulong			byteno;
+	int			row;		// row nb relative to cur blk
+	int			absrow;		// row nb absolute to first blk
+	int			nb_rows_per_block;
 	int			bitno;
-	char			*byte;
 	struct buffer_head	*bh;
+	int			rowval;
 
 	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
-	blkfirst = 1 + psbi->nr_istore_blocks;
-	blkno = blkfirst + (ino / sizeof(char)) / PNLFS_BLOCK_SIZE;
-	byteno = (ino / sizeof(char)) % PNLFS_BLOCK_SIZE;
-	bitno = ino % sizeof(char);
+	if (ino >= psbi->nr_inodes)
+		return -EINVAL;
 
+	/* Determine the exact location of the bit indicating the 'ino' state */
+	blkfirst = 1 + psbi->nr_istore_blocks;
+	absrow = ino / 32;
+	nb_rows_per_block = PNLFS_BLOCK_SIZE / 4;
+	blkno = blkfirst + absrow / nb_rows_per_block;
+	row = absrow % nb_rows_per_block;
+	bitno = ino % 32;
+
+	/* Writing the inode state */
 	bh = sb_bread(sb, blkno);
-	byte = &((char *)bh->b_data)[byteno];
-	*byte &= ~(1 << bitno);
+	rowval = le32_to_cpu(((unsigned int *)bh->b_data)[row]);
+	rowval &= ~(1 << bitno);
 	if (val)
-		*byte |= (1 << bitno);
-	mark_buffer_dirty(bh);
+		rowval |= (1 << bitno);
+	((unsigned int *)bh->b_data)[row] = le32_to_cpu(rowval);
 	brelse(bh);
+	return 0;
 }
 
 /*

@@ -124,7 +124,7 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
 
 /* inode.c */
 ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name);
-void	pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val);
+int	pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val);
 int	pnlfs_read_inode_state(struct super_block *sb, ino_t ino);
 ino_t	pnlfs_get_first_free_ino(struct super_block *sb);
 int	pnlfs_write_inode(struct super_block *, struct pnlfs_inode *, ino_t);
