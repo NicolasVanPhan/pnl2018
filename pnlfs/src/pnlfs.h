@@ -27,6 +27,8 @@
 #define PNLFS_FILENAME_LEN            28
 #define PNLFS_MAX_DIR_ENTRIES        128
 
+#define INO_ERR			((unsigned long)-1)
+
 
 /*
  * pnlFS partition layout

@@ -11,7 +11,7 @@ struct pnlfs_inode
 	*pnlfs_read_inode(struct super_block *sb, ino_t ino);
 */
 
-ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name)
+ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 {
 	struct pnlfs_inode_info		*pnli;
 	uint32_t			nr_entries;
@@ -23,11 +23,11 @@ ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 
 	if (strnlen(name, PNLFS_FILENAME_LEN) == PNLFS_FILENAME_LEN) {
 		pr_err("Filename too long\n");
-		return -EINVAL;
+		return INO_ERR;
 	}
 
 	if (dir == NULL)
-		return -EFAULT;
+		return INO_ERR;
 
 	/* Get the block where the inode--filename rows are stored */
 	pnli = container_of(dir, struct pnlfs_inode_info, vfs_inode);
@@ -36,7 +36,7 @@ ino_t pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 	bh = sb_bread(dir->i_sb, blkno);
 
 	/* Read the block to find the ino matching our filename */
-	ret = -1;
+	ret = INO_ERR;
 	rows = (struct pnlfs_file *)bh->b_data;
 	for (i = 0; i < nr_entries; i++) {
 		if (!strncmp(rows[i].filename, name, PNLFS_FILENAME_LEN)) {

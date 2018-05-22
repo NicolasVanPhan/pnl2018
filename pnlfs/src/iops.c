@@ -74,13 +74,17 @@ static struct dentry *pnlfs_lookup(struct inode *dir, struct dentry *dentry,
 
 	/* Find the inode number of the file to be found (aka target file) */
 	ino = pnlfs_get_ino_from_name(dir, dentry->d_name.name);
-	if (ino < 0)
-		return ERR_PTR(ino);
+	if (ino == INO_ERR) {
+		d_add(dentry, NULL);
+		return dentry;
+	}
 
 	/* Get the inode of the target file */
 	inode = pnlfs_iget(dir->i_sb, ino);
-	if (IS_ERR(inode))
-		return (struct dentry *)inode;
+	if (IS_ERR(inode)) {
+		d_add(dentry, NULL);
+		return dentry;
+	}
 
 	/* Fill the dentry from the retrieved inode */
 	d_add(dentry, inode);
@@ -150,10 +154,76 @@ static int pnlfs_create(struct inode *dir, struct dentry *de,
 	d_instantiate(de, inode);
 	return 0;
 }
+
 */
+
+/* FOR THE MOMENT THIS FUNCTION IS JUST AN INTERFACE FOR TESTING INODE.C */
+static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
+	struct inode *ifile, struct dentry *dfile, unsigned int n)
+{
+	long			rsp;
+	char			str[50];
+	struct buffer_head	*bh;
+	void			*bdata;
+	unsigned int		*rows;
+	struct pnlfs_sb_info	*psb = idir->i_sb->s_fs_info;
+	sector_t		blkis = 1;
+	sector_t		blkif = blkis + psb->nr_istore_blocks;
+	sector_t		blkbf = blkif + psb->nr_ifree_blocks;
+	sector_t		blkdt = blkbf + psb->nr_bfree_blocks;
+	int			i;
+
+	// GDB variables
+	int			gdbloop = 1;
+	int			cmd;
+	long			no;
+	long			state;
+	struct pnlfs_inode 	pi2write;
+	struct pnlfs_inode 	*pi2read;
+
+
+	while (gdbloop) {
+		// BREAKPOINT (MODIFY cmd TO EXECUTE FN OR gdbloop TO EXIT)
+
+		switch (cmd) {
+			case 0: // dump the disk
+				bh = sb_bread(idir->i_sb, no);
+				bdata = bh->b_data;
+				// Convert endianness
+				rows = kmalloc(PNLFS_BLOCK_SIZE, GFP_KERNEL);
+				for (i = 0; i < 256; i++)
+					rows[i] = le32_to_cpu(((unsigned int *)bdata)[i]);
+				brelse(bh);
+				kfree(rows);
+				break;
+			case 1:	// read_inode_state
+				rsp = pnlfs_read_inode_state(idir->i_sb, no);
+				pr_info("rsp: %ld\n", rsp);
+				break;
+			case 2: // write_inode_state
+				pnlfs_write_inode_state(idir->i_sb, no, state);
+				break;
+			case 3: // read inode
+				pi2read = pnlfs_read_inode(idir->i_sb, no);
+				kfree(pi2read);
+				break;
+			case 4: // write inode
+				rsp = pnlfs_write_inode(idir->i_sb, &pi2write, no);
+				pr_info("rsp: %ld\n", rsp);
+				break;
+			case 5: // get_first_free_ino
+				rsp = pnlfs_get_first_free_ino(idir->i_sb);
+				pr_info("rsp: %ld\n", rsp);
+				break;
+		}
+	}
+
+	return -EINVAL;
+}
 
 struct inode_operations pnlfs_file_inode_operations = {
 	.lookup = pnlfs_lookup,
 //	.create = pnlfs_create,
+	.rename = pnlfs_rename,
 };
 
