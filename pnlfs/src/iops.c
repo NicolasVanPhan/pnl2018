@@ -205,7 +205,8 @@ static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
 				break;
 			case 3: // read inode
 				pi2read = pnlfs_read_inode(idir->i_sb, no);
-				kfree(pi2read);
+				if (!IS_ERR(pi2read))
+					kfree(pi2read);
 				break;
 			case 4: // write inode
 				rsp = pnlfs_write_inode(idir->i_sb, &pi2write, no);

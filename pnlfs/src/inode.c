@@ -180,17 +180,23 @@ int pnlfs_write_inode(struct super_block *sb,				 // [DONE]
 	struct buffer_head	*bh;
 	int			row; // inode row in disk block
 
-	if (pnli == NULL)
+	if (pnli == NULL) {
+		pr_err("pnlfs_write_inode() : Invalid NULL inode\n");
 		return -EINVAL;
+	}
 	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
-	if (ino < 0 || ino >= psbi->nr_inodes)
+	if (ino < 0 || ino >= psbi->nr_inodes) {
+		pr_err("pnlfs_write_inode() : Inode out of range\n");
 		return -EINVAL;
+	}
 	blkno = 1 + ino / PNLFS_INODES_PER_BLOCK;
 	bh = sb_bread(sb,  blkno);
-	if (bh == NULL)
+	if (bh == NULL) {
+		brelse(bh);
+		pr_err("pnlfs_write_inode() : Block %ld read failed\n", blkno);
 		return -EIO;
+	}
 	row = ino % PNLFS_INODES_PER_BLOCK;
-
 	((struct pnlfs_inode *)bh->b_data)[row] = *pnli;
 	mark_buffer_dirty(bh);
 	brelse(bh);
@@ -216,12 +222,14 @@ struct pnlfs_inode *pnlfs_read_inode(struct super_block *sb, ino_t ino)
 	blkno = 1 + ino / PNLFS_INODES_PER_BLOCK;
 	bh = sb_bread(sb,  blkno);
 	if (bh == NULL) {
+		brelse(bh);
 		pr_err("pnlfs_read_inode() : Block %ld read failed\n", blkno);
 		return ERR_PTR(-EIO);
 	}
 	row = ino % PNLFS_INODES_PER_BLOCK;
 	pnli = kmalloc(sizeof(struct pnlfs_inode), GFP_KERNEL);
 	if (pnli == NULL) {
+		brelse(bh);
 		pr_err("pnlfs_read_inode() : Kmalloc failed\n");
 		return ERR_PTR(-ENOMEM);
 	}
