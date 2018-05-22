@@ -178,6 +178,37 @@ static int pnlfs_create(struct inode *dir, struct dentry *de,
 	return 0;
 }
 
+/*
+ * This function undoes all what pnlfs_create has done
+ */
+static int pnlfs_unlink(struct inode *dir, struct dentry *de)
+{
+	struct super_block	*sb;
+	struct inode		*inode;
+	struct pnlfs_inode_info	*pnlii;
+	ino_t			ino;
+	sector_t		bno;
+	int			ret;
+
+	sb = dir->i_sb;
+	inode = d_inode(de);
+	pnlii = container_of(inode, struct pnlfs_inode_info, vfs_inode);
+	ino = inode->i_ino;
+
+	// Remove the file from the directory in the disk
+	ret = pnlfs_dir_rm(dir, ino);
+	if (ret < 0)
+		return ret;
+
+	// Free the file index block
+	bno = pnlii->index_block;
+	pnlfs_write_block_state(sb, bno, 1);
+
+	// Write back
+	pnlfs_write_inode_state(sb, ino, 1);
+	return 0;
+}
+
 
 /* FOR THE MOMENT THIS FUNCTION IS JUST AN INTERFACE FOR TESTING INODE.C */
 static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
@@ -279,6 +310,7 @@ static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
 struct inode_operations pnlfs_file_inode_operations = {
 	.lookup = pnlfs_lookup,
 	.create = pnlfs_create,
-//	.rename = pnlfs_rename,
+	.rename = pnlfs_rename,
+	.unlink = pnlfs_unlink,
 };
 
