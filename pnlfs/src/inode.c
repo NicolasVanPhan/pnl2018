@@ -39,6 +39,8 @@ ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 	ret = INO_ERR;
 	rows = (struct pnlfs_file *)bh->b_data;
 	for (i = 0; i < nr_entries; i++) {
+		if ((rows[i].filename)[0] == '\0')
+			continue;
 		if (!strncmp(rows[i].filename, name, PNLFS_FILENAME_LEN)) {
 			ret = le32_to_cpu(rows[i].inode);
 			break;
@@ -48,10 +50,144 @@ ino_t	pnlfs_get_ino_from_name(struct inode *dir, const char *name)
 	return ret;
 }
 
+/* -------------------------------------------------------------------------- */
+/* ---------- BFREE --------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Sets the bit corresponding to block 'bno' in the bfree bitmap
+ */
+int pnlfs_write_block_state(struct super_block *sb, sector_t bno, char val)
+{
+	struct pnlfs_sb_info	*psbi;
+	sector_t		blkfirst;
+	sector_t		blkno;
+	int			row;		// row nb relative to cur blk
+	int			absrow;		// row nb absolute to first blk
+	int			nb_rows_per_block;
+	int			bitno;
+	struct buffer_head	*bh;
+	int			rowval;
+
+	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
+	if (bno < 0 || bno >= psbi->nr_blocks)
+		return -EINVAL;
+
+	/* Determine the exact location of the bit indicating the 'bno' state */
+	blkfirst = 1 + psbi->nr_istore_blocks + psbi->nr_ifree_blocks;
+	absrow = bno / 32;
+	nb_rows_per_block = PNLFS_BLOCK_SIZE / 4;
+	blkno = blkfirst + absrow / nb_rows_per_block;
+	row = absrow % nb_rows_per_block;
+	bitno = bno % 32;
+
+	/* Writing the block state */
+	bh = sb_bread(sb, blkno);
+	rowval = le32_to_cpu(((unsigned int *)bh->b_data)[row]);
+	rowval &= ~(1 << bitno);
+	if (val)
+		rowval |= (1 << bitno);
+	((unsigned int *)bh->b_data)[row] = le32_to_cpu(rowval);
+	brelse(bh);
+	return 0;
+}
+
+/*
+ * Returns the bit corresponding to block 'bno' in the bfree bitmap
+ */
+int pnlfs_read_block_state(struct super_block *sb, sector_t bno)
+{
+	struct pnlfs_sb_info	*psbi;
+	sector_t		blkfirst;
+	sector_t		blkno;
+	int			row;		// row nb relative to cur blk
+	int			absrow;		// row nb absolute to first blk
+	int			nb_rows_per_block;
+	int			bitno;
+	struct buffer_head	*bh;
+	int			rowval;
+
+	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
+	if (bno < 0 || bno >= psbi->nr_blocks)
+		return -EINVAL;
+
+	/* Determine the exact location of the bit indicating the 'bno' state */
+	blkfirst = 1 + psbi->nr_istore_blocks + psbi->nr_ifree_blocks;
+	absrow = bno / 32;
+	nb_rows_per_block = PNLFS_BLOCK_SIZE / 4;
+	blkno = blkfirst + absrow / nb_rows_per_block;
+	row = absrow % nb_rows_per_block;
+	bitno = bno % 32;
+
+	/* Reading the inode state */
+	bh = sb_bread(sb, blkno);
+	rowval = le32_to_cpu(((unsigned int *)bh->b_data)[row]);
+	brelse(bh);
+	if (rowval & (1<<bitno))
+		return 1;
+	else
+		return 0;
+}
+
+/*
+ * This function gets the bno of the first free block on the disk
+ */
+ino_t pnlfs_get_first_free_bno(struct super_block *sb)
+{
+	struct pnlfs_sb_info	*psbi;
+	sector_t		bno;
+	sector_t		blkno;
+	sector_t		blkfirst;
+	sector_t		blklast;
+	struct buffer_head	*bh;
+	unsigned long		nb_rows_per_block; // how many rows in a blk
+	unsigned long		nb_total_rows;  // how many rows in total
+	unsigned long		nb_rows;	// how many rows in current blk
+	unsigned long		*addr;
+	int			nb_blocks_full;
+
+	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
+	blkfirst = 1 + psbi->nr_istore_blocks + psbi->nr_ifree_blocks;
+	blklast = blkfirst + psbi->nr_bfree_blocks;
+	nb_rows_per_block = PNLFS_BLOCK_SIZE / sizeof(unsigned long);
+	nb_total_rows = psbi->nr_blocks / sizeof(unsigned long);
+
+	/* For each bfree block */
+	nb_blocks_full = 0;
+	for (blkno = blkfirst; blkno < blklast; blkno++) {
+		/* Read the current bfree block */
+		bh = sb_bread(sb, blkno);
+		addr = (unsigned long *)bh->b_data;
+
+		/* Get how many rows we have in the current block */
+		nb_rows = nb_rows_per_block;
+		if (blkno == blklast - 1) // Last bfree block may not be full */
+			nb_rows = nb_total_rows % nb_rows_per_block;
+
+		/* Look for the first free block */
+		bno = find_first_bit(addr, nb_rows * 64);
+		brelse(bh);
+
+		/* If we found a free inode, bingo */
+		if (bno < nb_rows * 64)
+			return (nb_blocks_full * nb_total_rows * 64 - 1) + bno;
+
+		nb_blocks_full++;
+	}
+	pr_err("Disk full : no blocks available\n");
+	return -1;
+}
+
+
+
+/* -------------------------------------------------------------------------- */
+/* ---------- IFREE --------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+
 /*
  * Sets the bit corresponding to inode 'ino' in the ifree bitmap
  */
-int pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val)	 // [DONE]
+int pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val)
 {
 	struct pnlfs_sb_info	*psbi;
 	sector_t		blkfirst;
@@ -89,7 +225,7 @@ int pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val)	 // [DO
 /*
  * Returns the bit corresponding to inode 'ino' in the ifree bitmap
  */
-int pnlfs_read_inode_state(struct super_block *sb, ino_t ino)			// [WORKS]
+int pnlfs_read_inode_state(struct super_block *sb, ino_t ino)
 {
 	struct pnlfs_sb_info	*psbi;
 	sector_t		blkfirst;
@@ -126,7 +262,7 @@ int pnlfs_read_inode_state(struct super_block *sb, ino_t ino)			// [WORKS]
 /*
  * This function gets the ino of the first free inode on the disk
  */
-ino_t pnlfs_get_first_free_ino(struct super_block *sb)				 // [DONE]
+ino_t pnlfs_get_first_free_ino(struct super_block *sb)
 {
 	struct pnlfs_sb_info	*psbi;
 	ino_t			ino;
@@ -138,14 +274,16 @@ ino_t pnlfs_get_first_free_ino(struct super_block *sb)				 // [DONE]
 	unsigned long		nb_total_rows;  // how many rows in total
 	unsigned long		nb_rows;	// how many rows in current blk
 	unsigned long		*addr;
+	int			nb_blocks_full;
 
 	psbi = (struct pnlfs_sb_info *)sb->s_fs_info;
 	blkfirst = 1 + psbi->nr_istore_blocks;
-	blklast= 1 + psbi->nr_istore_blocks + psbi->nr_ifree_blocks;
+	blklast = blkfirst + psbi->nr_bfree_blocks;
 	nb_rows_per_block = PNLFS_BLOCK_SIZE / sizeof(unsigned long);
 	nb_total_rows = psbi->nr_inodes / sizeof(unsigned long);
 
 	/* For each ifree block */
+	nb_blocks_full = 0;
 	for (blkno = blkfirst; blkno < blklast; blkno++) {
 		/* Read the current ifree block */
 		bh = sb_bread(sb, blkno);
@@ -157,17 +295,22 @@ ino_t pnlfs_get_first_free_ino(struct super_block *sb)				 // [DONE]
 			nb_rows = nb_total_rows % nb_rows_per_block;
 
 		/* Look for the first free inode */
-		ino = find_first_bit(addr, nb_rows);
+		ino = find_first_bit(addr, nb_rows * 64);
 		brelse(bh);
 
 		/* If we found a free inode, bingo */
-		if (ino < nb_rows)
-			return ino;
+		if (ino < nb_rows * 64)
+			return (nb_blocks_full * nb_total_rows * 64 - 1) + ino;
 
+		nb_blocks_full++;
 	}
-	pr_warn("Disk full : no inode available\n");
+	pr_err("Disk full : no inodes available\n");
 	return -1;
 }
+
+/* -------------------------------------------------------------------------- */
+/* ---------- ISTORE -------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
 /*
  * This function writes a pnlfs inode on a pnlfs image

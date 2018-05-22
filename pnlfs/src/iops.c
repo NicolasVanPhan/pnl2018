@@ -216,6 +216,17 @@ static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
 				rsp = pnlfs_get_first_free_ino(idir->i_sb);
 				pr_info("rsp: %ld\n", rsp);
 				break;
+			case 6: // read_block_state
+				rsp = pnlfs_read_block_state(idir->i_sb, no);
+				pr_info("rsp: %ld\n", rsp);
+				break;
+			case 7: // write_block_state
+				pnlfs_write_block_state(idir->i_sb, no, state);
+				break;
+			case 8: // get_first_free_bno
+				rsp = pnlfs_get_first_free_bno(idir->i_sb);
+				pr_info("rsp: %ld\n", rsp);
+				break;
 		}
 	}
 
