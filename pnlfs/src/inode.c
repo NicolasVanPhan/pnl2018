@@ -68,14 +68,14 @@ int	pnlfs_free_blk(struct inode *inode, int nb)
 
 	/* Treat errors */
 	if (nb > pnli->nr_entries) {
-		pr_err("pnlfs_alloc_blk : Free more than filesize\n");
+		pr_err("pnlfs_free_blk : Free more than filesize\n");
 		return -1;
 	}
 
 	/* Get file index block */
 	bh = sb_bread(sb, pnli->index_block);
 	if (bh == NULL) {
-		pr_err("pnlfs_alloc_blk : File index block unreadable\n");
+		pr_err("pnlfs_free_blk : File index block unreadable\n");
 		return -1;
 	}
 	dblk = (struct pnlfs_file_index_block*)bh->b_data;
