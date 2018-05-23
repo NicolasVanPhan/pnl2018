@@ -73,7 +73,7 @@ pnlfs_write(struct file* file, const char __user *src, size_t len, loff_t *off)
 	char	*to;
 	int	offset;
 	int	length;
-	char	eof;
+	int	must_add_eof;
 
 	if (*off < 0)
 		return 0;
@@ -100,8 +100,13 @@ pnlfs_write(struct file* file, const char __user *src, size_t len, loff_t *off)
 	}
 
 	/* Determine how many char must be written to this block */
+	must_add_eof = 0;
 	length = nb_char_per_blk - *off % nb_char_per_blk;
-	length = len < length ? len : length;
+	pr_info(" length: %d, len: %d\n", length, len);
+	if (len < length) {
+		length = len;
+		must_add_eof = 1;
+	}
 
 	/* Determine the block offset from which we must write */
 	offset = *off % nb_char_per_blk;
@@ -116,17 +121,13 @@ pnlfs_write(struct file* file, const char __user *src, size_t len, loff_t *off)
 	/* Write ! */
 	from = src;
 	to = &((char*)bh->b_data)[offset];
-	if (copy_from_user(to, from, length - 1)) {
+	if (copy_from_user(to, from, length)) {
 		pr_err("pnlfs_write() : copy from user failed\n");
 		return -EIO;
 	}
 	/* Not forgetting to add a \0 */
-	/*
-	eof = '\0';
-	from = &eof;
-	strncpy(to + length - 1, from, 1);
-	*/
-	to[length - 1] = '\0';
+	if (must_add_eof)
+		to[length - 1] = '\0';
 
 	pr_info("bno: %d, len: %d, off: %d\n", bno, length, offset);
 
@@ -261,6 +262,7 @@ pnlfs_read(struct file* file, char __user *dest, size_t len, loff_t *off)
 	 * (copy_from_user() may have copied beyong a \0,
 	 * in which case we don't want to return 'length'
 	 * the the actual length of the string sent */
+	 pr_info(" length ignoring EOF : %d\n", length);
 	for (i = 0; i < length && from[i] != '\0'; i++);
 	length = i;
 
