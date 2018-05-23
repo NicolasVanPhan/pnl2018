@@ -17,7 +17,7 @@ pnlfs_unlink(struct inode *dir, struct dentry *de);
 /*
  * This function writes an inode back to the disk
  */
-int pnlfs_iset(struct super_block *sb, struct inode *inode)
+int pnlfs_iset(struct super_block *sb, struct inode *inode, int sync)
 {
 	struct pnlfs_inode_info	*pnlii;
 	struct pnlfs_inode	*pnli;
@@ -34,7 +34,7 @@ int pnlfs_iset(struct super_block *sb, struct inode *inode)
 	pnli->filesize = cpu_to_le32(inode->i_size);
 	pnli->index_block = cpu_to_le32(pnlii->index_block);
 	pnli->nr_entries = cpu_to_le32(pnlii->nr_entries);
-	ret = pnlfs_write_inode(sb, pnli, inode->i_ino);
+	ret = pnlfs_write_inode(sb, pnli, inode->i_ino, sync);
 
 	kfree(pnli);
 	return ret;
@@ -289,7 +289,7 @@ static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
 					kfree(pi2read);
 				break;
 			case 4: // write inode
-				rsp = pnlfs_write_inode(idir->i_sb, &pi2write, no);
+				rsp = pnlfs_write_inode(idir->i_sb, &pi2write, no, 0);
 				pr_info("rsp: %ld\n", rsp);
 				break;
 			case 5: // get_first_free_ino

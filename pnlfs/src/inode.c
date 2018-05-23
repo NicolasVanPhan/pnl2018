@@ -511,7 +511,7 @@ long pnlfs_get_first_free_ino(struct super_block *sb)
  * This function writes a pnlfs inode on a pnlfs image
  */
 int pnlfs_write_inode(struct super_block *sb,				 // [DONE]
-	struct pnlfs_inode *pnli ,ino_t ino)
+	struct pnlfs_inode *pnli ,ino_t ino, int sync)
 {
 	struct pnlfs_sb_info	*psbi;
 	sector_t		blkno;
@@ -537,6 +537,8 @@ int pnlfs_write_inode(struct super_block *sb,				 // [DONE]
 	row = ino % PNLFS_INODES_PER_BLOCK;
 	((struct pnlfs_inode *)bh->b_data)[row] = *pnli;
 	mark_buffer_dirty(bh);
+	if (sync)
+		sync_dirty_buffer(bh);
 	brelse(bh);
 	return 0;
 }

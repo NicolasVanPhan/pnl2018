@@ -27,6 +27,76 @@ static struct dentry *pnlfs_mount(struct file_system_type *fs_type,
 /* --------- Superblock Operations ------------------------------------------ */
 /* -------------------------------------------------------------------------- */
 
+static
+int pnlfs_sop_write_inode(struct inode *inode, struct writeback_control *wbc)
+{
+	return pnlfs_iset(inode->i_sb, inode, wbc->sync_mode == WB_SYNC_ALL);
+}
+
+static int pnlfs_sync_fs(struct super_block *sb, int wait)
+{
+	struct buffer_head	*bh;
+	struct pnlfs_superblock	psb;
+	struct pnlfs_sb_info	*psbi;
+	sector_t		blkfirst;
+	sector_t		blklast;
+	sector_t		blkno;
+	int			i;
+	int			nb_rows_per_block;
+	ulong			*bitmap;
+
+	/* Prepare the superblock to write */
+	psbi = sb->s_fs_info;
+	psb.magic = cpu_to_le32(sb->s_magic);
+	psb.nr_blocks = cpu_to_le32(psbi->nr_blocks);
+	psb.nr_inodes = cpu_to_le32(psbi->nr_inodes);
+	psb.nr_istore_blocks = cpu_to_le32(psbi->nr_istore_blocks);
+	psb.nr_ifree_blocks = cpu_to_le32(psbi->nr_ifree_blocks);
+	psb.nr_bfree_blocks = cpu_to_le32(psbi->nr_bfree_blocks);
+	psb.nr_free_inodes = cpu_to_le32(psbi->nr_free_inodes);
+	psb.nr_free_blocks = cpu_to_le32(psbi->nr_free_blocks);
+
+	/* Write the superblock */
+	bh = sb_bread(sb, 0);
+	*((struct pnlfs_superblock*)bh->b_data) = psb;
+	mark_buffer_dirty(bh);
+	if (wait)
+		sync_dirty_buffer(bh);
+	brelse(bh);
+
+	/* Write the bitmaps */
+	/* Injecting superblock content (the i bitmaps) */
+	blkfirst = 1 + psbi->nr_istore_blocks; // first ifree block number
+	blklast = blkfirst + psbi->nr_ifree_blocks; // last ifree block number
+	nb_rows_per_block = PNLFS_BLOCK_SIZE / sizeof(ulong);
+	bitmap = psbi->ifree_bitmap;
+	for (blkno = blkfirst; blkno < blklast; blkno++) { // foreach bitmap blk
+		bh = sb_bread(sb, blkno); // get the bitmap block
+		for (i = 0; i < nb_rows_per_block; i++) // save the rows
+			((ulong *)bh->b_data)[i] = cpu_to_le64(*bitmap++);
+		mark_buffer_dirty(bh);
+		if (wait)
+			sync_dirty_buffer(bh);
+		brelse(bh);
+	}
+
+	/* Injecting superblock content (the b bitmaps) */
+	blkfirst = 1 + psbi->nr_istore_blocks + psbi->nr_ifree_blocks;
+	blklast = blkfirst + psbi->nr_bfree_blocks; // last ifree block number
+	nb_rows_per_block = PNLFS_BLOCK_SIZE / sizeof(ulong);
+	bitmap = psbi->bfree_bitmap;
+	for (blkno = blkfirst; blkno < blklast; blkno++) { // foreach bitmap blk
+		bh = sb_bread(sb, blkno); // get the bitmap block
+		for (i = 0; i < nb_rows_per_block; i++) // save the rows
+			((ulong *)bh->b_data)[i] = cpu_to_le64(*bitmap++);
+		mark_buffer_dirty(bh);
+		if (wait)
+			sync_dirty_buffer(bh);
+		brelse(bh);
+	}
+	return 0;
+}
+
 /*
  * This function undoes all what has been done by fill_super()
  */
@@ -77,7 +147,9 @@ static void pnlfs_destroy_inode(struct inode *vfsi)
 static const struct super_operations pnlfs_sops = {
 	.put_super = pnlfs_put_super,
 	.alloc_inode = pnlfs_alloc_inode,
+	.write_inode = pnlfs_sop_write_inode,
 	.destroy_inode = pnlfs_destroy_inode,
+	.sync_fs = pnlfs_sync_fs,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -125,6 +197,7 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 	psbi->nr_bfree_blocks = le32_to_cpu(psb->nr_bfree_blocks);
 	psbi->nr_free_inodes = le32_to_cpu(psb->nr_free_inodes);
 	psbi->nr_free_blocks = le32_to_cpu(psb->nr_free_blocks);
+	brelse(bh);
 	
 	/* Extracting superblock content (the i bitmaps) */
 	ifree_bitmap = kmalloc(PNLFS_BLOCK_SIZE * psbi->nr_ifree_blocks,
@@ -137,6 +210,7 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 		bh = sb_bread(sb, blkno); // get the bitmap block
 		for (i = 0; i < nb_rows_per_block; i++) // save the rows
 			*pcur_row++ = le64_to_cpu(((ulong *)bh->b_data)[i]);
+		brelse(bh);
 	}
 	psbi->ifree_bitmap = ifree_bitmap;
 
@@ -151,6 +225,7 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 		bh = sb_bread(sb, blkno); // get the bitmap block
 		for (i = 0; i < nb_rows_per_block; i++) // save the rows
 			*pcur_row++ = le64_to_cpu(((ulong *)bh->b_data)[i]);
+		brelse(bh);
 	}
 	psbi->bfree_bitmap = bfree_bitmap;
 
@@ -171,7 +246,6 @@ static int pnlfs_fill_super(struct super_block *sb, void *data, int silent)
 		return -1;
 	}
 
-	brelse(bh);
 	return 0;
 }
 

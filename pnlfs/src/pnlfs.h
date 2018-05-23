@@ -12,6 +12,7 @@
 #include <linux/buffer_head.h>
 //#include <linux/exportfs.h>
 #include <linux/vfs.h>
+#include <linux/writeback.h>
 //#include <linux/seq_file.h>
 //#include <linux/mount.h>
 //#include <linux/log2.h>
@@ -117,6 +118,7 @@ typedef unsigned long	ulong;
 struct inode *pnlfs_alloc_inode(struct super_block *sb);
 
 /* iops.c */
+int          pnlfs_iset(struct super_block *sb, struct inode *inode, int sync);
 struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
 
 /* fops.c */
@@ -143,7 +145,7 @@ int	pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val);
 int	pnlfs_read_inode_state(struct super_block *sb, ino_t ino);
 long	pnlfs_get_first_free_ino(struct super_block *sb);
 
-int	pnlfs_write_inode(struct super_block *, struct pnlfs_inode *, ino_t);
+int	pnlfs_write_inode(struct super_block *, struct pnlfs_inode *, ino_t,int);
 struct pnlfs_inode *pnlfs_read_inode(struct super_block *sb, ino_t ino);
 
 /* ------------ Inode and file operations ------------------------------------*/
