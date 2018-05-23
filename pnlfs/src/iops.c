@@ -219,6 +219,13 @@ static int pnlfs_mkdir(struct inode *dir, struct dentry *de, umode_t mode)
 
 static int pnlfs_rmdir(struct inode *dir, struct dentry *de)
 {
+	struct inode		*inode;
+	struct pnlfs_inode_info *pnlii;
+
+	inode = d_inode(de);
+	pnlii = container_of(inode, struct pnlfs_inode_info, vfs_inode);
+	if (pnlii->nr_entries != 0)
+		return -ENOTEMPTY;
 	return pnlfs_unlink(dir, de);
 }
 
