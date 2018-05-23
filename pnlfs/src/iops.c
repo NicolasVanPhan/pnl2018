@@ -130,8 +130,8 @@ static int pnlfs_create(struct inode *dir, struct dentry *de,
 	struct super_block	*sb;
 	struct inode		*inode;
 	struct pnlfs_inode_info	*pnlii;
-	ino_t			ino;
-	sector_t		bno;
+	long			ino;
+	long			bno;
 	int			ret;
 
 	sb = dir->i_sb;
@@ -158,13 +158,17 @@ static int pnlfs_create(struct inode *dir, struct dentry *de,
 
 	// Add the new file to the directory in the disk
 	ret = pnlfs_dir_add(dir, de->d_name.name, ino);
-	if (ret < 0)
+	if (ret < 0) {
+		iput(inode);
 		return ret;
+	}
 
 	// Find a free block for the file index block
 	bno = pnlfs_get_first_free_bno(sb);
-	if (bno < 0)
+	if (bno < 0) {
+		iput(inode);
 		return -1;
+	}
 
 	// Attach the file index block to the inode
 	pnlii = container_of(inode, struct pnlfs_inode_info, vfs_inode);
@@ -172,7 +176,7 @@ static int pnlfs_create(struct inode *dir, struct dentry *de,
 	pnlii->nr_entries= 0;
 
 	// Write the new inode to the disk
-	pnlfs_iset(sb, inode);
+	//pnlfs_iset(sb, inode); // [TODO : REMOVE]
 
 	// Write back
 	pnlfs_write_inode_state(sb, ino, 0);
@@ -209,6 +213,8 @@ static int pnlfs_unlink(struct inode *dir, struct dentry *de)
 
 	// Write back
 	pnlfs_write_inode_state(sb, ino, 1);
+	inode_dec_link_count(inode);
+	iput(inode);
 	return 0;
 }
 
