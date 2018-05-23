@@ -133,11 +133,11 @@ ino_t	pnlfs_dir_get_ino(struct inode *dir, const char *name);
 
 int	pnlfs_write_block_state(struct super_block *sb, sector_t bno, char val);
 int	pnlfs_read_block_state(struct super_block *sb, sector_t bno);
-ino_t	pnlfs_get_first_free_bno(struct super_block *sb);
+long	pnlfs_get_first_free_bno(struct super_block *sb);
 
 int	pnlfs_write_inode_state(struct super_block *sb, ino_t ino, char val);
 int	pnlfs_read_inode_state(struct super_block *sb, ino_t ino);
-ino_t	pnlfs_get_first_free_ino(struct super_block *sb);
+long	pnlfs_get_first_free_ino(struct super_block *sb);
 
 int	pnlfs_write_inode(struct super_block *, struct pnlfs_inode *, ino_t);
 struct pnlfs_inode *pnlfs_read_inode(struct super_block *sb, ino_t ino);
