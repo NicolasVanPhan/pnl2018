@@ -224,6 +224,7 @@ pnlfs_read(struct file* file, char __user *dest, size_t len, loff_t *off)
 	const char		*from;
 	char			*to;
 	int			length;
+	int			i;
 
 	inode = file->f_inode;
 	nb_char_per_blk = PNLFS_BLOCK_SIZE;
@@ -255,6 +256,13 @@ pnlfs_read(struct file* file, char __user *dest, size_t len, loff_t *off)
 		pr_err("pnlfs_read() : copy to user failed\n");
 		return -EIO;
 	}
+
+	/* Compute the actual length of the read string
+	 * (copy_from_user() may have copied beyong a \0,
+	 * in which case we don't want to return 'length'
+	 * the the actual length of the string sent */
+	for (i = 0; i < length && from[i] != '\0'; i++);
+	length = i;
 
 	pr_info("bno: %d, len: %d, off: %lld\n", bno, length, *off);
 
