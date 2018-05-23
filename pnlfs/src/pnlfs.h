@@ -125,6 +125,10 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
 
 /* inode.c */
 
+long	pnlfs_findex_blk(struct inode *inode, int row);
+int	pnlfs_free_blk(struct inode *inode, int nb);
+int	pnlfs_alloc_blk(struct inode *inode, int nb);
+
 int	pnlfs_dir_rm(struct inode *dir, ino_t ino);
 int	pnlfs_dir_add(struct inode *dir, const char *name, ino_t ino);
 int	pnlfs_dir_set_name(struct inode *dir, ino_t ino, char *src);

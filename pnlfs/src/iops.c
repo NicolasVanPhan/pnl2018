@@ -327,6 +327,18 @@ static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
 				rsp = pnlfs_dir_get_name(idir, no, name);
 				pr_info("rsp : %ld\n", rsp);
 				break;
+			case 14: // alloc_blk
+				rsp = pnlfs_alloc_blk(ifile, no);
+				pr_info("rsp : %ld\n", rsp);
+				break;
+			case 15: // free_blk
+				rsp = pnlfs_free_blk(ifile, no);
+				pr_info("rsp : %ld\n", rsp);
+				break;
+			case 16: // findex_blk
+				rsp = pnlfs_findex_blk(ifile, no);
+				pr_info("rsp : %ld\n", rsp);
+				break;
 		}
 	}
 
