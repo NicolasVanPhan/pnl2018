@@ -34,14 +34,14 @@ long	pnlfs_findex_blk(struct inode *inode, int row)
 
 	/* Treat errors */
 	if (row < 0 || row >= pnli->nr_entries) {
-		pr_err("pnlfs_alloc_blk : Invalid row value\n");
+		pr_err("pnlfs_findex_blk: Invalid row value\n");
 		return -EINVAL;
 	}
 
 	/* Get file index block */
 	bh = sb_bread(sb, pnli->index_block);
 	if (bh == NULL) {
-		pr_err("pnlfs_alloc_blk : File index block unreadable\n");
+		pr_err("pnlfs_findex_blk : File index block unreadable\n");
 		return -1;
 	}
 
