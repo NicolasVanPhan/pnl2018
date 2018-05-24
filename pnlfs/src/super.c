@@ -13,15 +13,26 @@ MODULE_AUTHOR("Nicolas Phan");
 MODULE_DESCRIPTION("A filesystem");
 MODULE_LICENSE("GPL");
 
-/*
-struct inode *pnlfs_alloc_inode(struct super_block *sb);
-*/
+static int
+pnlfs_sop_write_inode(struct inode *inode, struct writeback_control *wbc);
 
-static void pnlfs_put_super(struct super_block *sb);
-static void pnlfs_destroy_inode(struct inode *vfsi);
-static int pnlfs_fill_super(struct super_block *sb, void *data, int silent);
-static struct dentry *pnlfs_mount(struct file_system_type *fs_type,
-	int flags, const char *dev_name, void *data);
+static int
+pnlfs_sync_fs(struct super_block *sb, int wait);
+
+static void
+pnlfs_put_super(struct super_block *sb);
+
+static struct inode
+*pnlfs_alloc_inode(struct super_block *sb);
+
+static void
+pnlfs_destroy_inode(struct inode *vfsi);
+
+static int
+pnlfs_fill_super(struct super_block *sb, void *data, int silent);
+
+static struct dentry
+*pnlfs_mount(struct file_system_type *, int, const char *, void *);
 
 /* -------------------------------------------------------------------------- */
 /* --------- Superblock Operations ------------------------------------------ */
@@ -114,7 +125,7 @@ static void pnlfs_put_super(struct super_block *sb)
 /*
  * This functions allocates a new pnlfs inode
  */
-struct inode *pnlfs_alloc_inode(struct super_block *sb)
+static struct inode *pnlfs_alloc_inode(struct super_block *sb)
 {
 	struct pnlfs_inode_info *pnli;
 

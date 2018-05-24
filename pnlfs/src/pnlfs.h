@@ -115,7 +115,6 @@ typedef unsigned long	ulong;
 /* ------------ Function prototypes ------------------------------------------*/
 
 /* super.c */
-struct inode *pnlfs_alloc_inode(struct super_block *sb);
 
 /* iops.c */
 int          pnlfs_iset(struct super_block *sb, struct inode *inode, int sync);
@@ -125,18 +124,19 @@ struct inode *pnlfs_iget(struct super_block *sb, unsigned long ino);
 
 /* block.c */
 
-/* inode.c */
-
+/* file.c */
 long	pnlfs_findex_blk(struct inode *inode, int row);
 int	pnlfs_free_blk(struct inode *inode, int nb);
 int	pnlfs_alloc_blk(struct inode *inode, int nb);
 
+/* dir.c */
 int	pnlfs_dir_rm(struct inode *dir, ino_t ino);
 int	pnlfs_dir_add(struct inode *dir, const char *name, ino_t ino);
 int	pnlfs_dir_set_name(struct inode *dir, ino_t ino, char *src);
 int	pnlfs_dir_get_name(struct inode *dir, ino_t ino, char *dest);
 ino_t	pnlfs_dir_get_ino(struct inode *dir, const char *name);
 
+/* inode.c */
 int	pnlfs_write_block_state(struct super_block *sb, sector_t bno, char val);
 int	pnlfs_read_block_state(struct super_block *sb, sector_t bno);
 long	pnlfs_get_first_free_bno(struct super_block *sb);
