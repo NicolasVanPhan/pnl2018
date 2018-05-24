@@ -106,7 +106,6 @@ pnlfs_write(struct file* file, const char __user *src, size_t len, loff_t *off)
 	/* Determine how many char must be written to this block */
 	must_add_eof = 0;
 	length = nb_char_per_blk - *off % nb_char_per_blk;
-	pr_info(" length: %d, len: %ld\n", length, len);
 	if (len < length) {
 		length = len;
 		must_add_eof = 1;
@@ -133,7 +132,6 @@ pnlfs_write(struct file* file, const char __user *src, size_t len, loff_t *off)
 	if (must_add_eof)
 		to[length - 1] = '\0';
 
-	pr_info("bno: %d, len: %d, off: %d\n", bno, length, offset);
 
 	/* Update cursor position */
 	*off += length;
@@ -190,11 +188,9 @@ pnlfs_read(struct file* file, char __user *dest, size_t len, loff_t *off)
 	 * (copy_from_user() may have copied beyong a \0,
 	 * in which case we don't want to return 'length'
 	 * the the actual length of the string sent */
-	 pr_info(" length ignoring EOF : %d\n", length);
 	for (i = 0; i < length && from[i] != '\0'; i++);
 	length = i;
 
-	pr_info("bno: %d, len: %d, off: %lld\n", bno, length, *off);
 
 	/* Update cursor position */
 	*off += length;

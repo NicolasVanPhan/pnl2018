@@ -9,7 +9,7 @@
 
 #include "pnlfs.h"
 
-MODULE_AUTHOR("Nicolas Phan");
+MODULE_AUTHOR("Nicolas Phan and Bryan Aggoun");
 MODULE_DESCRIPTION("A filesystem");
 MODULE_LICENSE("GPL");
 
