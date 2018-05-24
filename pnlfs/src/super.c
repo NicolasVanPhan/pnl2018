@@ -119,7 +119,6 @@ static void pnlfs_put_super(struct super_block *sb)
 	kfree(psbi->ifree_bitmap);
 	kfree(psbi->bfree_bitmap);
 	kfree(psbi);
-	sb->s_fs_info = NULL;
 }
 
 /*
