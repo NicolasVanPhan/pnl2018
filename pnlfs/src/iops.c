@@ -249,5 +249,6 @@ struct inode_operations pnlfs_file_inode_operations = {
 	.unlink = pnlfs_unlink,
 	.mkdir = pnlfs_mkdir,
 	.rmdir = pnlfs_rmdir,
+	.rename = pnlfs_rename,
 };
 

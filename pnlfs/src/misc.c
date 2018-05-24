@@ -76,7 +76,7 @@ pnlfs_write_backup(struct file* file, const char __user *src, size_t len, loff_t
 }
 
 /* FOR THE MOMENT THIS FUNCTION IS JUST AN INTERFACE FOR TESTING INODE.C */
-static int pnlfs_rename(struct inode* idir, struct dentry *ddir,
+int pnlfs_rename(struct inode* idir, struct dentry *ddir,
 	struct inode *ifile, struct dentry *dfile, unsigned int n)
 {
 	long			rsp;

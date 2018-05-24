@@ -148,6 +148,10 @@ long	pnlfs_get_first_free_ino(struct super_block *sb);
 int	pnlfs_write_inode(struct super_block *, struct pnlfs_inode *, ino_t,int);
 struct pnlfs_inode *pnlfs_read_inode(struct super_block *sb, ino_t ino);
 
+/* misc.c */
+int pnlfs_rename(struct inode* idir, struct dentry *ddir,
+	struct inode *ifile, struct dentry *dfile, unsigned int n);
+
 /* ------------ Inode and file operations ------------------------------------*/
 
 extern struct inode_operations pnlfs_file_inode_operations;
